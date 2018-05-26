@@ -1,0 +1,3676 @@
+format caracter de windows para unix
+set fileformat=unix
+
+PROFTPD
+site www.proftpd.org
+ultimo proftpd em realese 1.2.10rc3 
+aplique o download da ultima versao
+>	tar zxvf proftpd.1.2.10rc3.tar.gz 
+>	cd proftpd.1.2.10rc3 
+>	proftpd.1.2.10rc3#
+>	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+>	make
+	obs> make clean limpa a instalaÁ„o caso haja erro
+>	make install
+>	cd contrib/dist/rpm/
+>	cp proftpd.init.d /etc/rc.d/init.d/proftpd
+>	chmod 755 /etc/rc.d/init.d/proftpd 
+>	cd /etc/rc.d/init.d/
+>	chkconfig --add proftpd
+>	cp -p contrib/dist/rpm/ftp.pamd /etc/pam.d/ftp
+++++configuracao 
+>	arquivo proftpd.conf
+>	cd /etc
+>	vi proftpd.conf
+	
+ServerName                      "ProFTPD"
+ServerType                      standalone
+DefaultServer                   on
+Extendedlog                     /var/log/proftpd.log
+ServerIdent                     on "ftp Cabelos Dourados"
+DefaultRoot                     ~ !grupo_ftp_livre
+
+OBS:se estiver em inetd troque para standalone
+
+# Set the user and group under which the server will run.
+User                            nobody
+Group                           nobody
+
+OBS: no Group troque nogroup para nobody pois nogroup e para usuario Unix
+
+  # Limit WRITE everywhere in the anonymous chroot
+  <Directory upload>
+        <Limit STOR RETR>
+        AllowALL
+        </Limit>
+  </Directory>
+
+  <Limit WRITE>
+    DenyAll
+  </Limit>
+</Anonymous>
+>       service named stop
+>       service named start
+
+PROTO A CONFIGURACAO DO SERVIDOR FTP
+OBS.:
+ATENTE-SE
+<Anonymous ~ftp> PARA ONDE ESTA O MAPEAMENTO DE PASTA <Anonymous /home/ftp>
+
+Perceba que o que est· entre <Anonymous></Anonymous>, È a configuraÁ„o que garante o acesso sem senha ao usu·rio anonymous ou ao usu·rio ftp, que È o seu apelido. Ele ter· acesso apenas ao seu diretÛrio /home/ftp. 
+
+PorÈm, neste caso, n„o basta essa configuraÁ„o para habilitar o uso do usu·rio ftp, È necess·rio comentar tal usu·rio dentro do arquivo /etc/ftpusers. Todo usu·rio listado nesse arquivo, ser· impedido de logar. Ent„o, n„o esqueÁa de fazer isso.
+
+
+OPENSSH
+site www.openssh.org
+site ftp://ftp.openbsd.md5.com.ar/pub/OpenBSD/OpenSSH/portable/rpms/SRPMS/
+site ftp://ftp.openbsd.md5.com.ar/pub/OpenBSD/OpenSSH/portable/
+ultimo openssh em realese  openssh-3.8p1.tar.gz
+aplique o download da ultima versao
+>	tar zxvf  openssh-3.8p1.tar.gz
+>	cd openssh-3.8p1
+>	rpm qa | grep openssh
+>	./configure --prefix=/usr --sysconfdir=/etc/ssh --localstatedir=/var --with-ipadd-display --with-pam --with-md5-passwords
++++++++configuracao
+>	cd /etc/ssh
+>	vi sshd_config
+# PermitRootLogin yes
+descomente e inclua
+PermitRootLogin no
+>       service named stop
+>       service named start
+
+
+
+PROTO A CONFIGURACAO DO SERVIDOR SSH
+
+
+BIND=============>NAMED
+site www.bind.org
+site ftp://ftp.bind.com/pub/bind/ 
+site www.bind.com
+site ou http://www.isc.org/bind
+aplique o download da ultima versao
+e edite o arquivo globals.h
+>       tar zxvf bind-9.2.3.tar.gz
+>       cd bind-9.2.3
+>	cd bin/named/include/named/
+>	vi globas.h
+"/run/named.pid"
+"/run/lwresd.pip"
+________________para
+
+"/run/named/named.pid"
+"/run/named/lwresd.pip"
+proto
+>	cd bind-9.2.3
+>       bind-9.2.3#
+>	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+>       make
+>       make install
+_____________________________________________________________________________________________________
+>	vi /etc/named.conf
+zone "localhost" IN {
+        type master;
+        file "localhost.zone";
+        allow-update { none; };
+};
+
+zone "0.0.127.in-addr.arpa" IN {
+        type master;
+        file "named.local";
+        allow-update { none; };
+};
+zone "linux.com.br" IN {
+        type master;
+        file "linux.com.br";
+        allow-update { none; };
+};
+
+zone "100.1.10.in-addr.arpa" IN {
+        type master;
+        file "10.1.100";
+        allow-update { none; };
+};
+_____________________________________________________________________________________________________
+>	vi /named/linux.com.br
+$TTL    86400
+$ORIGIN linux.com.br.
+@                       1D IN SOA       ns1.linux.com.br root.linux.com.br (
+                                        42              ; serial (d. adams)
+                                        3H              ; refresh
+                                        15M             ; retry
+                                        1W              ; expiry
+                                        1D )            ; minimum
+
+@                       1D IN NS        ns1.linux.com.br.
+@                       1D IN A         10.1.100.100
+                        1D IN MX        5       10.1.100.100
+intranet                1D IN A         10.1.100.100
+www                     1D IN CNAME     ns1.linux.com.br.
+_____________________________________________________________________________________________________
+>	vi /named/10.1.100
+$TTL    86400
+@       IN      SOA     ns1.linux.com.br. root.linux.com.br.  (
+                                      100997022700 ; Serial
+                                      28800      ; Refresh
+                                      1004400      ; Retry
+                                      3600000    ; Expire
+                                      86400 )    ; Minimum
+@         IN      NS      ns1.linux.com.br.
+
+100       IN      PTR     intranet.linux.com.br.
+_____________________________________________________________________________________________________
+>	vi /hosts
+127.0.0.1       localhost.localdomain localhost
+10.1.100.100    redhat.linux.com.br redhat ns1  ns1.linux.com.br proxy.linux.com.br proxy
+_____________________________________________________________________________________________________
+# mkdir /var/log/named
+# vim /etc/named.conf 
+
+logging{
+        channel custom{
+                        file "/var/log/named/named.log"
+                        print-time yes; #imprimir informaÁ„o temporais
+                        print-category yes; #Mostrar a categoria da mensagem
+};
+        category config {custom;};
+        category notify {custom;};
+        category dnssec {custom;};
+        category general {custom;};
+        category security {custom;};
+        category xfer-out {custom;};
+        category lame-servers {custom;};
+};
+_____________________________________________________________________________________________________
+>	vi host.conf
+# /etc/host.conf
+#
+# Este arquivo determina quais servi√ßos poder√£o ser utilizados e em qual ordem,
+# os quais ser√£o informados para o cliente DNS. Cada linha aqui dever√° ter
+# apenas uma diretiva com suas configura√ß√µes apropriadas, onde no
+# caso de ter mais de uma alternativa, as mesmas dever√£o ser separadas por
+# v√≠rgula.
+#
+# As diretivas permitidas s√£o:
+#    order         Especifica a ordem em que os servi√ßos ser√£o analisados.
+#                  Valores: hosts,bind,nis
+#    multi         Informa todos os nomes de um host especificado em /etc/hosts
+#                  Valores: on/off
+#    nospoof       Preven√ß√£o contra spoofing para os servi√ßos que utilizarem
+#                  a biblioteca resolv+.
+#                  Valores: on/off
+#    trim          Remove o dom√≠nio para hosts espec√≠ficos. Normalmente
+#                  utilizado para dom√≠nios locais. Pode aparecer mais de uma
+#                  vez.
+#                  Valores: lista de hostnames separdos por ":", ";" ou ","
+#    spoofalert    Caso o nospoof tenha sido definido, registra mensagens de
+#                  erro para o syslog caso haja tentativa de spoofing.
+#                  Valores: on/off
+#    spoof         Diretiva opcional para permitir, bloquear e advertir sobre
+#                  spoofing.
+#                  Valores: off/nowarn/warn
+#    reorder       Endere√ßos locais s√£o listados primeiramente.
+#                  Valores: on/off
+#
+# Para maiores informa√ß√µes, consulte a p√°gina de manual online do arquivo,
+# atrav√©s do comando <man host.conf>.
+#
+# Por           Carlindo Marcelo <carlindo@definitylinux.com.br>
+# Rev           Helio Cavichiolo Jr <helio@definitylinux.com.br>
+order bind, hosts
+multi on
+# Fim do arquivo
+_____________________________________________________________________________________________________
+>	vi /etc/sysconfig/networkO
+NETWORKING=yes
+# FORWARD_IPV4=no   # not used anymore. see /etc/sysctl.conf
+HOSTNAME="redhat.linux.com.br"
+GATEWAY="10.1.100.100"
+GATEWAYDEV="eth0"
+_____________________________________________________________________________________________________
+>	vi /etc/sysconfig/network-scripts
+>	vi ifcfg-eth0
+DEVICE=eth0
+BOOTPROTO=static
+BROADCAST=10.1.100.255
+IPADDR=10.1.100.100
+NETMASK=255.255.255.0
+NETWORK=10.1.100.0
+HOSTNAME=redhat
+DOMAIN=linux.com.br
+ONBOOT=yes
+OBS.: USA-SE ESSE parametro 'BRIDGE = br0' se a configuraÁ„o for um bridge
+>	service network stop
+>	service network start
+
+>	service named stop
+>	service named start
+###################################  MODO BRIDGE #####################################################
+vi /etc/sysconfig/network-scripts/ifcfg-br0
+  DEVICE=br0
+  TYPE=Bridge   # Este "B" mai˙sculo È obrigatÛrio.
+  BOOTPROTO=dhcp
+  ONBOOT=yes
+  DELAY=0
+OBS.: OPCIONAL
+
+####ip fixo
+DEVICE=br0ONBOOT=yes
+TYPE=Bridge
+BOOTPROTO=none
+IPADDR=192.168.0.102
+NETMASK=255.255.255.0
+STP=on
+DELAY=0
+_____________________________________________________________________________________________________
+______________________________________________testes________________________________________________
+jobs	servico ativo
+fg	servico desligado
+netstat -t | more
+netstat -an | more
+netstat -an | grep 22
+netstat -an | grep 53
+route add default gw 10.1.100.100
+route del net 169.254.0.0 netmask 255.255.255.0 
+
+PROTO A CONFIGURACAO DO SERVIDOR NAMED
+
+
+
+DHCPD
+site www.isc.org
+site ftp://ftp.isc.org/isc/dhcp/dhcp-3.0.1.tar.gz 
+ultimo dhcpd em realese dhcp-3.0.1
+aplique o download da ultima versao
+>       tar zxvf  openssh-3.8p1.tar.gz
+>       cd dhcp-3.0.1
+>	./configure; make ; make install 
+>	vi /etc/dhcpd.conf
+server-identifier ns1.linux.com.br;
+ddns-update-style ad-hoc;
+default-lease-time 600;
+max-lease-time 200;
+option domain-name      "linux.com.br";
+option domain-name-servers      10.1.100.100;
+authoritative;
+option routers  10.1.100.100;
+option subnet-mask      255.255.255.0;
+option broadcast-address 10.1.100.255;
+option time-offset      200;
+subnet 10.1.100.0 netmask 255.255.255.0{
+        range  10.1.100.101 10.1.100.254;
+        default-lease-time 600;
+        max-lease-time 200;
+        option domain-name              "linux.com.br";
+        option domain-name-servers              10.1.100.100;
+        option routers          10.1.100.100;
+        option subnet-mask              255.255.255.0;
+        option broadcast-address 10.1.100.255;
+        option time-offset              200;
+}
+>	touch /var/state/dhcp/dhcpd.leases
+>	echo 1> /proc/sys/net/ipv4/ip_forward
+>	iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+___________________________________________________________________________________________________
+SYSLOG____________________________COMENTARIO____________________________________________>
+>	vi /etc/syslog.conf
+*.info;mail.none;news.none;authpriv.none;cron.none      /var/log/messages
+*.*							/dev/tty12
+
+mail.*                                                  /var/log/maillog
+mail.*							@10.1.100.100
+
+netstat -an | grep 514
+
+>	vi /etc/sysconfig/syslog
+#SYSLOGD_OPTIONS="-m 0"
+SYSLOGD_OPTIONS="-m 0 -r -x"
+
+OBS= Agora vc pode receber log de outras mgs.
+
+PROTO syslog
+
+last | more ===========> mostra todas a autenticacao de sistema
+pts/0	porta externas
+stat /var/log/messages =========> mostra criacao do ultimo arquivo
+dmesg | more	=============> mostra o modo de depuracao do kernel
+mkbootdisk + kernel 
+grub-install /dev/hda
+shutdown -k 5 "o sistem ficata em manutecao em cinco minuto"
+
+PROTO A CONFIGURACAO DO SERVIDOR DHCPD
+
+
+
+SENDMAIL
+site www.sendmail.org
+site www.squirrelmail.org
+site www.openwebmail.org
+ultimo sendmail realese sendmail-8.13.1.tar.gz
+aplique o download da ultima versao
+>       tar zxvf  sendmail-8.13.1.tar.gz
+>       ./Build
+>       ./Build install
+>	cd /etc/mail
+>	vi sendmail.mc
+
+PROFTPD
+site www.proftpd.org
+ultimo proftpd em realese 1.2.10rc3 
+aplique o download da ultima versao
+>	tar zxvf proftpd.1.2.10rc3.tar.gz 
+>	cd proftpd.1.2.10rc3 
+>	proftpd.1.2.10rc3#
+>	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+>	make
+>	make install
+>	cd contrib/dist/rpm/
+>	cp proftpd.init.d /etc/rc.d/init.d/proftpd
+>	chmod 755 /etc/rc.d/init.d/proftpd 
+>	cd /etc/rc.d/init.d/
+>	chkconfig --add proftpd
+pacote debian systemctl start proftpd
+	      systemctl enable proftpd
+++++configuracao 
+>	arquivo proftpd.conf
+>	cd /etc
+>	vi proftpd.conf
+	
+ServerName                      "ProFTPD"
+ServerType                      standalone
+DefaultServer                   on
+Extendedlog                     /var/log/proftpd.log
+ServerIdent                     on "ftp Cabelos Dourados"
+DefaultRoot                     ~ !grupo_ftp_livre
+
+OBS:se estiver em inetd troque para standalone
+
+# Set the user and group under which the server will run.
+User                            nobody
+Group                           nobody
+
+OBS: no Group troque nogroup para nobody pois nogroup e para usuario Unix
+
+  # Limit WRITE everywhere in the anonymous chroot
+  <Directory upload>
+        <Limit STOR RETR>
+        AllowALL
+        </Limit>
+  </Directory>
+
+  <Limit WRITE>
+    DenyAll
+  </Limit>
+</Anonymous>
+>       service named stop
+>       service named start
+
+PROTO A CONFIGURACAO DO SERVIDOR FTP
+
+#Spider Websites with Wget ñ 20 Practical Examples
+
+Wget is extremely powerful, but like with most other command line programs, the plethora of options it supports can be intimidating to new users. Thus what we have here are a collection of wget commands that you can use to accomplish common tasks from downloading single files to mirroring entire websites. It will help if you can read through the wget manual but for the busy souls, these commands are ready to execute.
+
+1. Download a single file from the Internet
+wget http://example.com/file.iso
+
+2. Download a file but save it locally under a different name
+wget --output-document=filename.html example.com
+
+3. Download a file and save it in a specific folder
+wget --directory-prefix=folder/subfolder example.com
+
+4. Resume an interrupted download previously started by wget itself
+wget --continue example.com/big.file.iso
+
+5. Download a file but only if the version on server is newer than your local copy
+wget --continue --timestamping wordpress.org/latest.zip
+
+6. Download multiple URLs with wget. Put the list of URLs in another text file on separate lines and pass it to wget.
+wget --input list-of-file-urls.txt
+
+7. Download a list of sequentially numbered files from a server
+wget http://example.com/images/{1..20}.jpg
+
+8. Download a web page with all assets ñ like stylesheets and inline images ñ that are required to properly display the web page offline.
+wget --page-requisites --span-hosts --convert-links --adjust-extension http://example.com/dir/file
+
+Mirror websites with Wget
+
+9. Download an entire website including all the linked pages and files
+wget --execute robots=off --recursive --no-parent --continue --no-clobber http://example.com/
+
+10. Download all the MP3 files from a sub directory
+wget --level=1 --recursive --no-parent --accept mp3,MP3 http://example.com/mp3/
+
+11. Download all images from a website in a common folder
+wget --directory-prefix=files/pictures --no-directories --recursive --no-clobber --accept jpg,gif,png,jpeg http://example.com/images/
+
+12. Download the PDF documents from a website through recursion but stay within specific domains.
+wget --mirror --domains=abc.com,files.abc.com,docs.abc.com --accept=pdf http://abc.com/
+
+13. Download all files from a website but exclude a few directories.
+wget --recursive --no-clobber --no-parent --exclude-directories /forums,/support http://example.com
+
+Wget for Downloading Restricted Content
+
+Wget can be used for downloading content from sites that are behind a login screen or ones that check for the HTTP referer and the User Agent strings of the bot to prevent screen scraping.
+
+14. Download files from websites that check the User Agent and the HTTP Referer
+wget --refer=http://google.com --user-agent=îMozilla/5.0 Firefox/4.0.1? http://nytimes.com
+
+15. Download files from a password protected sites
+wget --http-user=labnol --http-password=hello123 http://example.com/secret/file.zip
+
+16. Fetch pages that are behind a login page. You need to replace user and password with the actual form fields while the URL should point to the Form Submit (action) page.
+wget --cookies=on --save-cookies cookies.txt --keep-session-cookies --post-data ëuser=labnol&password=123' http://example.com/login.php
+wget --cookies=on --load-cookies cookies.txt --keep-session-cookies http://example.com/paywall
+
+Retrieve File Details with wget
+
+17. Find the size of a file without downloading it (look for Content Length in the response, the size is in bytes)
+wget --spider --server-response http://example.com/file.iso
+
+18. Download a file and display the content on screen without saving it locally.
+wget --output-document ñ --quiet google.com/humans.txt
+
+wget
+19. Know the last modified date of a web page (check the Last Modified tag in the HTTP header).
+wget --server-response --spider http://www.labnol.org/
+
+20. Check the links on your website to ensure that they are working. The spider option will not save the pages locally.
+wget --output-file=logfile.txt --recursive --spider http://example.com
+
+Also see: Essential Linux Commands
+
+Wget ñ How to be nice to the server?
+
+The wget tool is essentially a spider that scrapes / leeches web pages but some web hosts may block these spiders with the robots.txt files. Also, wget will not follow links on web pages that use the rel=nofollow attribute.
+
+You can however force wget to ignore the robots.txt and the nofollow directives by adding the switch --execute robots=off to all your wget commands. If a web host is blocking wget requests by looking at the User Agent string, you can always fake that with the --user-agent=Mozilla switch.
+
+The wget command will put additional strain on the siteís server because it will continuously traverse the links and download files. A good scraper would therefore limit the retrieval rate and also include a wait period between consecutive fetch requests to reduce the server load.
+
+wget --limit-rate=20k --wait=60 --random-wait --mirror example.com
+
+In the above example, we have limited the download bandwidth rate to 20 KB/s and the wget utility will wait anywhere between 30s and 90 seconds before retrieving the next resource.
+
+Finally, a little quiz. What do you think this wget command will do?
+wget --span-hosts --level=inf --recursive dmoz.org
+
+
+OPENSSH
+site www.openssh.org
+site ftp://ftp.openbsd.md5.com.ar/pub/OpenBSD/OpenSSH/portable/rpms/SRPMS/
+site ftp://ftp.openbsd.md5.com.ar/pub/OpenBSD/OpenSSH/portable/
+ultimo openssh em realese  openssh-3.8p1.tar.gz
+aplique o download da ultima versao
+>	tar zxvf  openssh-3.8p1.tar.gz
+>	cd openssh-3.8p1
+>	rpm qa | grep openssh
+>	./configure --prefix=/usr --sysconfdir=/etc/ssh --localstatedir=/var --with-ipadd-display --with-pam --with-md5-passwords
++++++++configuracao
+>	cd /etc/ssh
+>	vi sshd_config
+# PermitRootLogin yes
+descomente e inclua
+PermitRootLogin no
+>       service named stop
+>       service named start
+
+
+
+
+
+
+PROTO A CONFIGURACAO DO SERVIDOR SSH
+
+
+BIND=============>NAMED
+site www.bind.org
+site ftp://ftp.bind.com/pub/bind/ 
+site www.bind.com
+aplique o download da ultima versao
+e edite o arquivo globals.h
+>       tar zxvf bind-9.2.3.tar.gz
+>       cd bind-9.2.3
+>	cd bin/named/include/named/
+>	vi globas.h
+"/run/named.pid"
+"/run/lwresd.pip"
+________________para
+
+"/run/named/named.pid"
+"/run/named/lwresd.pip"
+proto
+>	cd bind-9.2.3
+>       bind-9.2.3#
+>	./configure --prefix=/usr --sysconfdir=/etc --localstatedir=/var
+>       make
+>       make install
+_____________________________________________________________________________________________________
+>	vi /etc/named.conf
+zone "localhost" IN {
+        type master;
+        file "localhost.zone";
+        allow-update { none; };
+};
+
+zone "0.0.127.in-addr.arpa" IN {
+        type master;
+        file "named.local";
+        allow-update { none; };
+};
+zone "linux.com.br" IN {
+        type master;
+        file "linux.com.br";
+        allow-update { none; };
+};
+
+zone "100.1.10.in-addr.arpa" IN {
+        type master;
+        file "10.1.100";
+        allow-update { none; };
+};
+_____________________________________________________________________________________________________
+>	vi /named/linux.com.br
+$TTL    86400
+$ORIGIN linux.com.br.
+@                       1D IN SOA       ns1.linux.com.br root.linux.com.br (
+                                        42              ; serial (d. adams)
+                                        3H              ; refresh
+                                        15M             ; retry
+                                        1W              ; expiry
+                                        1D )            ; minimum
+
+@                       1D IN NS        ns1.linux.com.br.
+@                       1D IN A         10.1.100.100
+                        1D IN MX        5       10.1.100.100
+intranet                1D IN A         10.1.100.100
+www                     1D IN CNAME     ns1.linux.com.br.
+_____________________________________________________________________________________________________
+>	vi /named/10.1.100
+$TTL    86400
+@       IN      SOA     ns1.linux.com.br. root.linux.com.br.  (
+                                      100997022700 ; Serial
+                                      28800      ; Refresh
+                                      1004400      ; Retry
+                                      3600000    ; Expire
+                                      86400 )    ; Minimum
+@         IN      NS      ns1.linux.com.br.
+
+100       IN      PTR     intranet.linux.com.br.
+_____________________________________________________________________________________________________
+>	vi /hosts
+127.0.0.1       localhost.localdomain localhost
+10.1.100.100    redhat.linux.com.br redhat ns1  ns1.linux.com.br proxy.linux.com.br proxy
+_____________________________________________________________________________________________________
+>	vi host.conf
+# /etc/host.conf
+#
+# Este arquivo determina quais servi√ßos poder√£o ser utilizados e em qual ordem,
+# os quais ser√£o informados para o cliente DNS. Cada linha aqui dever√° ter
+# apenas uma diretiva com suas configura√ß√µes apropriadas, onde no
+# caso de ter mais de uma alternativa, as mesmas dever√£o ser separadas por
+# v√≠rgula.
+#
+# As diretivas permitidas s√£o:
+#    order         Especifica a ordem em que os servi√ßos ser√£o analisados.
+#                  Valores: hosts,bind,nis
+#    multi         Informa todos os nomes de um host especificado em /etc/hosts
+#                  Valores: on/off
+#    nospoof       Preven√ß√£o contra spoofing para os servi√ßos que utilizarem
+#                  a biblioteca resolv+.
+#                  Valores: on/off
+#    trim          Remove o dom√≠nio para hosts espec√≠ficos. Normalmente
+#                  utilizado para dom√≠nios locais. Pode aparecer mais de uma
+#                  vez.
+#                  Valores: lista de hostnames separdos por ":", ";" ou ","
+#    spoofalert    Caso o nospoof tenha sido definido, registra mensagens de
+#                  erro para o syslog caso haja tentativa de spoofing.
+#                  Valores: on/off
+#    spoof         Diretiva opcional para permitir, bloquear e advertir sobre
+#                  spoofing.
+#                  Valores: off/nowarn/warn
+#    reorder       Endere√ßos locais s√£o listados primeiramente.
+#                  Valores: on/off
+#
+# Para maiores informa√ß√µes, consulte a p√°gina de manual online do arquivo,
+# atrav√©s do comando <man host.conf>.
+#
+# Por           Carlindo Marcelo <carlindo@definitylinux.com.br>
+# Rev           Helio Cavichiolo Jr <helio@definitylinux.com.br>
+order bind, hosts
+multi on
+# Fim do arquivo
+_____________________________________________________________________________________________________
+>	vi /etc/sysconfig/network
+NETWORKING=yes
+# FORWARD_IPV4=no   # not used anymore. see /etc/sysctl.conf
+HOSTNAME="redhat.linux.com.br"
+GATEWAY="10.1.100.100"
+GATEWAYDEV="eth0"
+_____________________________________________________________________________________________________
+>	vi /etc/sysconfig/network-scripts
+>	vi ifcfg-eth0
+DEVICE=eth0
+BOOTPROTO=static
+BROADCAST=10.1.100.255
+IPADDR=10.1.100.100
+NETMASK=255.255.255.0
+NETWORK=10.1.100.0
+HOSTNAME=redhat
+DOMAIN=linux.com.br
+ONBOOT=yes
+>	service network stop
+>	service network start
+
+>	service named stop
+>	service named start
+_____________________________________________________________________________________________________
+______________________________________________testes________________________________________________
+jobs	servico ativo
+fg	servico desligado
+netstat -t | more
+netstat -an | more
+netstat -an | grep 22
+netstat -an | grep 53
+route add default gw 10.1.100.100
+route del net 169.254.0.0 netmask 255.255.255.0 
+
+PROTO A CONFIGURACAO DO SERVIDOR NAMED
+
+
+
+DHCPD
+site www.isc.org
+site ftp://ftp.isc.org/isc/dhcp/dhcp-3.0.1.tar.gz 
+ultimo dhcpd em realese dhcp-3.0.1
+aplique o download da ultima versao
+>       tar zxvf  openssh-3.8p1.tar.gz
+>       cd dhcp-3.0.1
+>	./configure; make ; make install 
+>	vi /etc/dhcpd.conf
+server-identifier ns1.linux.com.br;
+ddns-update-style ad-hoc;
+default-lease-time 600;
+max-lease-time 200;
+option domain-name      "linux.com.br";
+option domain-name-servers      10.1.100.100;
+authoritative;
+option routers  10.1.100.100;
+option subnet-mask      255.255.255.0;
+option broadcast-address 10.1.100.255;
+option time-offset      200;
+subnet 10.1.100.0 netmask 255.255.255.0{
+        range  10.1.100.101 10.1.100.254;
+        default-lease-time 600;
+        max-lease-time 200;
+        option domain-name              "linux.com.br";
+        option domain-name-servers              10.1.100.100;
+        option routers          10.1.100.100;
+        option subnet-mask              255.255.255.0;
+        option broadcast-address 10.1.100.255;
+        option time-offset              200;
+}
+>	touch /var/state/dhcp/dhcpd.leases
+>	echo 1> /proc/sys/net/ipv4/ip_forward
+>	iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+___________________________________________________________________________________________________
+SYSLOG____________________________COMENTARIO____________________________________________>
+>	vi /etc/syslog.conf
+*.info;mail.none;news.none;authpriv.none;cron.none      /var/log/messages
+*.*							/dev/tty12
+
+mail.*                                                  /var/log/maillog
+mail.*							@10.1.100.100
+
+netstat -an | grep 514
+
+>	vi /etc/sysconfig/syslog
+#SYSLOGD_OPTIONS="-m 0"
+SYSLOGD_OPTIONS="-m 0 -r -x"
+
+OBS= Agora vc pode receber log de outras mgs.
+
+PROTO syslog
+
+last | more ===========> mostra todas a autenticacao de sistema
+pts/0	porta externas
+stat /var/log/messages =========> mostra criacao do ultimo arquivo
+dmesg | more	=============> mostra o modo de depuracao do kernel
+mkbootdisk + kernel 
+grub-install /dev/hda
+shutdown -k 5 "o sistem ficata em manutecao em cinco minuto"
+
+PROTO A CONFIGURACAO DO SERVIDOR DHCPD
+
+
+
+SENDMAIL
+site www.sendmail.org
+site www.squirrelmail.org
+site www.openwebmail.org
+ultimo sendmail realese sendmail-8.13.1.tar.gz
+aplique o download da ultima versao
+>       tar zxvf  sendmail-8.13.1.tar.gz
+>       ./Build
+>       ./Build install
+>	cd /etc/mail
+>	vi sendmail.mc
+dnl define(`SMART_HOST',`smtp.your.provider')
+define(`confTO_CONNECT', `1h')dnl========>define(`confTO_CONNECT', `1m')dnl
+dnl define(`confAUTO_REBUILD')dnl
+dnl define(`confTRY_NULL_MX_LIST',true)dnl
+dnl define(`UUCP_MAILER_MAX', `2000000')dnl
+dnl define(`confAUTH_OPTIONS', `A')dnl
+define(`confAUTH_OPTIONS', `A p')dnl
+DAEMON_OPTIONS(`Port=smtp,Addr=127.0.0.0, Name=MTA')dnl===>DAEMON_OPTIONS(`Port=smtp,Addr=0.0.0.0, Name=MTA')dnl
+MASQUERADE_AS(`linux.com.br')dnl
+FEATURE(masquerade_envelope)dnl
+___________________________________________________________________________________________________
+>	vi /etc/mail/submit.mc
+FEATURE(`msp', `[127.0.0.0]')dnl==========================> para ________________________________>
+FEATURE(`msp', `[0.0.0.0]')dnl
+___________________________________________________________________________________________________
+>	vi/etc/mail/local-host-names
+# local-host-names - include all aliases for your machine here.
+linux.com.br
+___________________________________________________________________________________________________
+# Check the /usr/share/doc/sendmail/README.cf file for a description
+# of the format of this file. (search for access_db in that file)
+# The /usr/share/doc/sendmail/README.cf is part of the sendmail-doc
+# package.
+#
+# by default we allow relaying from localhost...
+#localhost.localdomain          RELAY
+#localhost                      RELAY
+#127.0.0.1                      RELAY
+10.1.100.0                      RELAY
+10.2.100.0                      RELAY
+10.3.100.0                      RELAY
+___________________________________________________________________________________________________
+>	vi /etc/sysconfig/sendmail
+DAEMON=yes
+QUEUE=1m
+___________________________________________________________________________________________________
+>	m4 sendmail.mc > sendmail.cf
+>	m4 submit.mc > submit.cf
+>	m4 sendmail 
+>	makemap hash access.db < access
+>	vi /etc/xinetd.d/ipop3
+service pop3
+{
+        disable = yes=========================================> no
+        socket_type             = stream
+        wait                    = no
+        user                    = root
+        server                  = /usr/sbin/ipop3d
+        log_on_success  += HOST DURATION
+        log_on_failure  += HOST
+}
+___________________________________________________________________________________________________
+> 	vi /etc/xinetd.d/imap
+service imap
+{
+        disable = yes============================================>no
+        socket_type             = stream
+        wait                    = no
+        user                    = root
+        server                  = /usr/sbin/imapd
+        log_on_success  += HOST DURATION
+        log_on_failure  += HOST
+}
+___________________________________________________________________________________________________
+>	service xinetd stop
+>	service xinetd start
+>	service sendmail stop
+>	service sendmail start
+_________________________________________TESTES_____________________________________
+>	netstat -an | grep 110
+>	netstat -an | grep 143
+mailq
+tail -f /var/log/maillog
+cd /var/spool/mail
+mail redhat@linux.com.br
+subject:teste
+teste
+.
+Cc: now
+
+PROTO A CONFIGURACAO DO SERVIDOR SENDMAIL
+
+
+
+
+SQUID-CACHE
+site www.squid-cache.org
+ultimo squid realese squid-2.5.STABLE6.tar.gz
+aplique o download da ultima versao
+>       tar zxvf squid-2.5.STABLE6.tar.gz
+>	cd squid-2.5.STABLE6
+>	./configure --prefix=/usr --sysconfdir=/etc/squid --localstatedir=/var --enable-linux-netfilter --enable-defaul-err-language=Portuguese
+>	make
+>	make install
+>	cd squid-2.5.STABLE6
+>	vi squid.conf
+#Default:
+http_port 8080
+#Default:
+icp_port 0
+#Default:
+cache_mem 128 MB
+#Default:
+maximum_object_size 65536 KB
+#Default:
+maximum_object_size_in_memory 128 KB
+#Default:
+cache_dir ufs /cache 200 20 256
+#Default:
+cache_access_log /var/log/squid/access.log
+#Default:
+cache_log /var/log/squid/cache.log
+#Default:
+cache_store_log /var/log/squid/store.log
+#Default:
+pid_filename /var/run/squid.pid
+#Default:
+client_netmask 255.255.255.0
+#Default:
+ftp_user Squid@
+
+auth_param basic program /usr/bin/ncsa_auth /etc/squid/passwd
+auth_param basic children 5
+auth_param basic realm AUTENTICACAO SQUID
+auth_param basic credentialsttl 2 hours
+
+#Default:
+negative_ttl 5 minutes
+
+acl rede1 src 10.1.100.0/255.255.255.0
+acl rede2 src 10.2.100.0/255.255.255.0
+acl rede3 src 10.3.100.0/255.255.255.0
+acl rede4 src 10.4.100.0/255.255.255.0
+acl sites_proibidos url_regex "/root/sites_proibidos.txt"
+# acl sites_permitidos url_regex "/root/sites_permitidos.txt"
+acl ips_proibidos dst "/root/ips_proibidos.txt"
+acl autenticacao proxy_auth required
+acl horario_permitido time MTWHF 08:00-23:00
+
+http_access deny sites_proibidos
+http_access deny ips_proibidos
+#http_access allow horario_permitido
+http_access allow autenticacao
+http_access allow rede1
+http_access allow rede2
+http_access allow rede3
+http_access allow rede4
+_____________________________________________________________________________________________________
+
+>	mkdir /cache
+>	chown nobody.nodody /cache
+>	mkdir /var/log/squid
+>	chown nobody.nodody /var/log/squid
+>	touch /var/log/squid/access.log
+>	touch /var/log/squid/store.log
+>	touch /var/log/squid/cache.log
+>	chown nobody.nodody /var/log/squid/*
+>	cd /squid-2.5.STABLE5/helpers/basic_auth/NCSA
+>	make
+>	make install
+>	cp ncsa_auth /usr/bin
+>	cp ncsa_auth.o /usr/local/lib
+>	service squid stop
+>	service squid start
+>	ou
+>	squid
+>	squid -z
+>	squid -C
+>	pa aux | tail | grep squid
+
+
+
+PROTO A CONFIGURACAO DO SERVIDOR SQUID
+
+
+wget http://dag.wieers.com/packages/sarg/sarg-1.4.1-4.dag.src.rpm
+http://sarg.sourceforge.net/sarg.php
+ultimo sarg realese sarg-1.4.1-5.dag.src.rpm ou sarg-1.4.1.tar.gz
+aplique o download da ultima versao
+>	rpmbuild --rebuild --with rht90 sarg-1.4.1-5.dag.src.rpm
+>       rpm -Uvh /usr/src/redhat/RPMS/i386/sarg-*
+>	"ou"
+>       tar zxvf sarg-1.4.1.tar.gz
+>	cd sarg-1.4.1
+>	./configure --prefix=/usr --sysconfdir=/etc/sarg; make; make install
+>	vi /etc/sarg/sarg.conf
+#language a ser utilizada;
+        language Portuguese
+    
+#Arquivo onde o sarg far√° busca de informa√ßcao;
+        access_log /var/log/squid/access.log
+T√≠lo da p√°na que ser√°ostrada em HTML
+        title "Squid User Access Reports"
+    
+# As entradas abaixo s√£referentes a cores e fontes onde poder√£ser
+# personalizadas a gosto do administrador.
+# Para este procedimento foram deixados os valores padr√µ
+        font_face Arial
+        header_color darkblue
+        header_bgcolor blanchedalmond
+        header_font_size -1
+        background_color white
+        text_color black
+        text_bgcolor beige
+        title_color green
+# Diretorio Tempor√°o onde ficar√£os dados
+        temporary_dir /tmp
+# Diretorio onde as paginas serao armazenadas e postreiormente acessadas.
+        output_dir /var/www/html/squid
+# Opcao que indica em qual ordem ser√°ostrada a se√ß Topuser
+# opcao:USER/CONNECT/BYTES/TIME
+        topuser_sort_field BYTES reverse
+# Opcao que indica em qual ordem serao mostrada o User
+# opcao:SITE/CONNECT/BYTES/TIME
+        user_sort_field BYTES reverse
+# Formato em que a data deve aparecer(e=dd/mm/yy, u=mm/dd/yy, w=yy/ww)
+        date_format e
+# Opcao para remover arquivos temporarios. 
+        remove_temp_files yes
+# TAG:  output_dir
+#       The reports will be saved in that directory
+#       sarg -o dir
+#
+output_dir /var/www/html/squid-reports
+# Opcao para cria o index.html principal
+        index yes
+# opcao que indica sobrescrever o relat√≥ caso ele j√°xista
+        overwrite_report yes
+# opcao para registros sem nome de usu√°o op√ßs:(ignore/ip/everybody)
+        records_without_userid ignore
+# opcao que indica a quantidade de sites mais acessados que ser√°       # mostrada na p√°na do relat√≥
+        topsites_num 150
+# opcao que indica o crit√©o de classifica√ß no √≠m topsites op√ßs:CONNECT/BYTES A/D
+# Neste exemplo esta sendo utilizado o crit√©o conex√£em forma decrescente.
+        topsites_sort_order CONNECT D
+# Esta op√ß indica que os c√≥os HTTP dever√£ser ignorados no relat√≥
+        exclude_codes /etc/sarg/exclude_codes
+# Tempo para checagem
+        max_elapsed 28800000
+# opcaos que poder√£ser escolhidas para gerar o relat√≥ 
+# topsites      --- Indica o site, conex√£e bytes
+# sites_users   --- Indica quais usu√°os estavam acessando um determinado site site
+# users_sites   --- Indica os sites acessados por cada usu√°o
+# date_time     --- Indica quantidade de bytes usados por dia e hora
+# denied        --- Indica os sites negados que foram negados com a URL completa
+# auth_failures --- Indica problemas de autentifica√ß
+        report_type topsites sites_users users_sites date_time denied auth_failures
+# opcao para exibir endere√ß completos.
+        long_url no
+___________________________________________________________________________________________________
+        
+>	vi /etc/sarg/languages/Portuguese
+Insira as entradas abaixo no fim do arquivo:
+        "Negado"
+        "Topsites"
+___________________________________________________________________________________________________
+>	 crontab -e  
+        55 23 * * * /usr/bin/sarg -f /etc/sarg/sarg.conf
+_________________________________________________________________________________________________ou
+Crie o arquivo abaixo dentro do diret√≥ /etc/sarg
+>	vi sargdia.sh
+
+        #!/bin/bash
+        HOJE=$(date +%d/%m/%Y)
+        /usr/sbin/sarg -f /etc/sarg/sarg.conf -d $HOJE-$HOJE
+        exit 0
+___________________________________________________________________________________________________
+>	chmod +x /etc/sarg/sargdia.sh (pressioneENTER)
+>       crontab -e  
+>       55 17* * * /etc/sarg/sargdia.sh 
+>	cd /www	
+>	ln -s /var/www/html/squid-reports squid 
+_____________________________________________teste_________________________________________________
+>	lynx _+_/squid
+
+PROTO O GERADOR DE RELATORIOS SARG
+
+
+
+NFS
+
+SERVIDOR DE SISTEMA DE ARQUIVOS
+
+>	service portmap restart
+>	vi /etc/exports
+
+/mnt/cdrom 10.1.100.0/255.255.255.0 (ro)
+/mnt/floppy 10.1.100.0/255.255.255.0 (ro)
+/tmp (rw)
+/home 10.1.100.0/255.255.255.0 (ro)
+/etc 10.1.100.0/255.255.255.0 (ro)
+______________________________________________________________________________________________________>		mkdir /mnt/nfs
+(rw)	qualquer um pode acessar
+(ro)	leitura
+>	service nfs stop
+>	service nfs start
+>	showmount -e
+>       showmount -e 10.1.100.100 ==========> para fim de teste
+>	mount 10.1.100.100:/mnt/cdrom	/mnt/nfs
+>	mount 10.1.100.100:/home	/mnt/nfs
+
+
+PROTO A CONFIGURACAO DO SERVIDOR NFS
+
+
+
+
+SAMBA
+site www.samba.org
+site www.samba.org/~jerry/RPMS/samba/RedHat/SRPMS/
+ultimo samba realese samba-3.0.6fedrc2-2.src.rpm ou em header samba-3.0.5.tar.gz
+aplique o download da ultima versao
+>	rpm -qa | grep samba
+>	rpm -ev samba#####
+>	rm -rf /etc/samba
+>	rpmbuild --rebuild --with rht90 samba-3.0.6fedrc2-2.src.rpm
+>	rpm -Uvh /usr/src/redhat/RPMS/i389/samba-*
+>	" ou "
+>       tar zxvf samba-3.0.5.tar.gz
+>	cd samba-3.0.5
+>	cd source
+>	./configure --prefix=/usr --sysconfdir=/etc/samba --localstatedir=/var --with-privatedir=/etc/samba --with-ssh --with-smbmount -with-configdir=/etc/samba
+>	make
+>	make install
+>	cd .. ou cd /samba-3.0.5
+>	cd /samba-3.0.5/packaging/RedHat
+>	ls
+>	cp smb.init /etc/rc.d/init.d/smb
+>	cp samba.xinetd /etc/xinetd.d/swat
+>	vi /etc/xinetd.d/swat
+service swat
+{
+        disable = yes===========================> para no
+        port            = 901
+        socket_type     = stream
+        wait            = no
+        only_from       = 127.0.0.1	====================>deleta
+        user            = root
+        server          = /usr/sbin/swat
+        log_on_failure  += USERID
+}
+_____________________________________________________________________________________________________
+____________________________configuracao simples do samba____________________________________________]>		vi /etc/smb.conf
+workgroup = MYGROUP
+para				=======================> autenticacao de dominio hostname
+workgroup = flavio
+
+security = users
+para				=======================> compartilhamento
+security = share
+
+[publico]
+	path=/tmp
+	read only=
+	guest ok= yes
+[cdrom]
+	path=/mnt/cdrom
+[floppy]
+	path=/mnt/floppy
+_____________________________________________________________________________________________________
+>	mkdir /mnt/samba
+>	smbmount //redhat/publico /mnt/samba -o guest
+>	smbmount //web1/meus documentos /mnt/samba -o username=administrador
+>	smbclient -L web1 -N ==================> evita senha
+
+____________________________configuracao simples do samba__________________________________________________________________________________________________________________________________________________
+>	vi /etc/samba/smb.conf
+# Global parameters
+
+[global]
+log file = /var/log/samba/log.%m
+smb passwd file = /etc/smbpasswd
+admin users = root
+local master = yes
+domain master = yes
+domain logons = yes
+# unix password sync = yes
+null passwords = no
+load printers = yes
+name resolve order = host wins bcast
+socket options = TCP_NODELAY SO_SNDBUF=8192 SO_RCVBUF=8192
+hosts equiv = /etc/hosts
+hostname lookups = yes
+username map = /etc/smbusers
+encrypt passwords = yes
+hosts allow = 10.1.100.0/255.255.255.0(coloque a faixa de IP que poder√°cessar seu servidor)
+logon drive = Z:
+logon path = \\%L\profiles (este item √©uito importante para quem usar w2k)
+logon home = \\%L\profiles (este item √©uito importante para quem usar w2k)
+password level = 0
+wins support = true
+dns proxy = no
+netbios name = serven
+server string = Servidor de Arquivos (PDC)
+remote announce = 10.1.100.100 10.1.100.254 (coloque a faixa de IP da sua rede)
+workgroup = solebac.com.br
+
+os level = 65
+debug level = 1
+printcap name = /etc/printcap
+security = user
+max log size = 100
+domain logons = yes
+domain logons = yes
+[netlogon]
+writeable = yes
+path = /home/netlogon
+force create mode = 0777
+create mask = 0777
+comment = Network Logon Service
+public = yes
+[profiles]
+comment = %u
+path = /home/%u
+public = no
+writable = yes
+browseable = yes
+printable = no
+create mask = 0777
+force create mode = 0770
+[files]
+comment = Arquivos
+path = /home/files
+public = no
+writable = yes
+browseable = yes
+printable = no
+write list = @users
+valid users = @users
+create mask = 0770
+force directory mode = 0770
+force create mode = 0770
+_______________________________________________________________________________
+>	mkdir /home/files
+>	mkdir /home/profiles
+>	mkdir /home/netlogon
+>	testparm /etc/samba/smb.conf
+>	chmod 0777 /home/netlogon	
+>	groupadd w2k                 ========================>Crie um grupo para m·quinas Windows2000 no Linux
+>	useradd -g w2k -s /bin/false -d /dev/null maquinaw2k$
+>	useradd -d /dev/null -s /dev/null -c [nome do usu·rio] -g [grupo] -m [nome da m·quina$]
+>	passwd -l maquinaw2k$	===========================>lock
+>	vi /etc/group
+w2k:x:537:maquinaw2k$
+>	smbpasswd -a root rocar a senha do root do samba por questıes de seguranÁa
+>	smbpasswd -a -m maquinaw2k$      ================>crie a conta da m·qui
+>	smbpasswd -e maquinaw2k$         =================> Ative essa conta
+>	smbpasswd -a root
+>	smbpasswd -e root
+
+alien -d MYSql*.rpm
+
+OPENLDAP _+_ DB
+site www.openldap.org
+site http://www.sleepycat.com
+site http://www.openldap.org/software/download/
+ultimo openldap realese openldap-2.2.15.tgz _+_  db-4.2.52.tar.gz
+aplique o download da ultima versao
+>	rpm -qa | grep openldap
+>	rpm -ev openldap
+>	tar zxvf db-4.2.52.tar.gz
+>	cd db-4.2.52
+>	cd db-4.2.52/build_unix
+>	../dist/configure --prefix=/usr --sysconfdir=/etc
+>	make
+>	make install
+>	tar zxvf openldap-2.2.15.tgz
+>	cd openldap-2.2.15
+>	./configure --prefix=/usr --sysconfdir=/etc --enable-crypt --enable-ldap --localstatedir=/var --libexecdir=/usr/sbin --with-tls --enable-slapd
+>	make
+>	make install
+>	vi 
+
+
+
+
+
+
+APACHE WEB SERVER
+site http://www.apache.org
+ultimo versao realese compativel com seus modulos httpd-2.0.50.tar.gz
+>	vi /httpd-2.0.48/server/mpm/prefork/prefork.c
+
+define DEFAULT_SERVER_LIMIT 256		|
+para 					|=========> limite de acesso para o sevidor
+define MAX_SERVER_LIMIT 20000		|
+>	tar zxvf httpd-2.0.50.tar.gz
+>	cd httpd-2.0.50
+>	vi config.layout
+#   Classical Apache path layout.
+<Layout Apache>
+    prefix:        /usr
+    exec_prefix:   ${prefix}
+    bindir:        ${exec_prefix}/bin
+    sbindir:       ${exec_prefix}/sbin
+    libdir:        ${exec_prefix}/lib
+    libexecdir:    ${exec_prefix}/libexec/modules
+    mandir:        ${prefix}/man
+    sysconfdir:    /etc/httpd/conf
+    datadir:       /var/www
+    installbuilddir: ${datadir}/build
+    errordir:      ${datadir}/error
+    iconsdir:      ${datadir}/icons
+    htdocsdir:     ${datadir}/html
+    manualdir:     ${datadir}/manual
+    cgidir:        ${datadir}/cgi-bin
+    includedir:    ${prefix}/include
+    localstatedir: /var
+    runtimedir:    ${localstatedir}/run
+    logfiledir:    ${localstatedir}/log/httpd
+    proxycachedir: ${localstatedir}/proxy
+</Layout>
+_____________________________________________________________________________________________________
+>	./configure --enable-mods-shared-shared=all -enable-ssl
+>	make
+>	rm -rf /etc/httpd/conf/httpd.conf
+>	make install
+>	tar zxvf ./configure --prefix=/usr --sysconfdir=/etc/php --with-config-file-path=/etc/php --with-apxs2 -with-mysql
+>	make 
+>	make install
+>	 ps -ax | grep http | wc -l ==============> mostra quantas conecÁao o httpd esta habilatado a receber
+
+_____________________________________________________________________________________________________
+>	vi /etc/httpd.conf
+
+
+_ServerAdmin webmaster@linux.com.br
+
+_ServerName redhat.linux.com.br
+
+_DirectoryIndex index.html index.html.var index.php
+
+_DocumentRoot "/var/www/html"
+
+
+_NameVirtualHost 10.1.100.100
+
+#
+# VirtualHost example:
+# Almost any Apache directive may go into a VirtualHost container.
+# The first VirtualHost section is used for requests without a known
+# server name.
+#
+<VirtualHost 10.1.100.100>
+    ServerAdmin webmaster@linux.com.br
+    DocumentRoot /www/
+    ServerName redhat.linux.com.br
+    ErrorLog logs/redhat.linux.com.br-error_log
+    CustomLog logs/redhat.linux.com.br-access_log common
+</VirtualHost>
+_____________________________________________________________________________________________________
+>	mkdir /www
+>	chown apache.apache /www
+>	cd /www
+>	vi index.php
+<?php
+phpinfo ()
+?>
+_____________________________________________________________________________________________________
+>	vi index.html
+<center>
+<font size=5 color=blue> ADMINISTRADOR DE REDES LINUX APACHE 2.0 </FONT><br>
+<font size=3 color=red>SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER
+SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER
+SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER
+SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER
+SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER SOLEBAC.COM.BR SOLEBAC_WEB_SERVER </FONT><br>
+
+</CENTER>
+
+
+PROTO A CONFIGURA«AO DE APACHE
+
+
+IPTABLES
+
+site http://www.netfilter.org/
+ultimo versao realese compativel com seus modulos, iptables-1.2.11.tar.bz2 
+>	tar -jxvf iptables-1.2.11.tar.bz2
+>	cd iptables-1.2.11
+>	vi Makefile
+PREFIX:=/usr/local ============================================> PREFIX:=/
+LIBDIR:=$(PREFIX)/lib
+BINDIR:=$(PREFIX)/sbin
+____________________________________________________________________________________________________
+>	make
+>	make install
+>	cd /etc/rc.d/init.d/
+>	vi firewall	ou	vi iptables
+____________________________________________________________________________________________________
+____________________________firewall para conectiva_________________________________________________
+#!/bin/bash
+# /etc/init.d/firewall
+# chkconfig: 2345 100 20
+# description: Inicializacao do iptables
+# processname: iptables
+# pidfile : /var/run/iptabless.pid
+. /etc/rc.d/init.d/functions
+. /etc/sysconfig/network
+if [ ${NETWORKING} = "no" ]
+   then
+   exit 0
+fi
+iptables=/usr/sbin/iptables
+modprobe=/sbin/modprobe
+#prog=firewall
+case "$1" in
+        start)
+        gprintf "Iniciando o serviÁo de %s: " "IPtables"
+        $modprobe ip_tables
+        $modprobe iptable_filter
+        $modprobe iptable_nat
+        $modprobe ip_conntrack
+        $modprobe ip_conntrack_ftp
+        $modprobe ip_nat_ftp
+        $modprobe ipt_LOG
+        $modprobe ipt_state
+        $modprobe ipt_MASQUERADE
+        $iptables -F
+        $iptables -Z
+        $iptables -X
+        $iptables -F -t nat
+        #$iptables -F -t mangle
+        $iptables -P INPUT DROP
+        $iptables -P FORWARD DROP
+        $iptables -P OUTPUT ACCEPT
+        #echo "Ativando protecao de Entrada(Kernel)"
+        echo 1 > /proc/sys/net/ipv4/ip_forward
+        echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
+        echo 1 > /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
+        for i in /proc/sys/net/ipv4/conf/*; do
+        echo 0 > $i/accept_redirects
+        echo 0 > $i/accept_source_route
+        echo 1 > $i/log_martians
+        echo 0 > $i/rp_filter
+        done
+        #echo "Ativando protecao de Entrada(INPUT)"
+        $iptables -A INPUT -s 10.0.0.0/8 -i eth1 -j DROP
+        $iptables -A INPUT -s 172.16.0.0/12 -i eth1 -j DROP
+        $iptables -A INPUT -s 192.168.0.0/16 -i eth1 -j DROP
+        $iptables -A INPUT -s 224.0.0.0/4 -i eth1 -j DROP
+        $iptables -A INPUT -s 240.0.0.0/5 -i eth1 -j DROP
+        $iptables -A INPUT -p ALL -s 127.0.0.1 -i lo -j ACCEPT
+        $iptables -A INPUT -p ALL -s 192.168.1.1 -i lo -j ACCEPT
+        $iptables -A INPUT -p ALL -s 200.196.111.135 -i lo -j ACCEPT
+        $iptables -A INPUT -p ALL -s 200.196.111.78 -i lo -j ACCEPT
+        $iptables -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+        #echo "Liberando o acesso ao squid e outras portas"
+        $iptables -A INPUT -p tcp -i eth0 -s 192.168.1.0/24 -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth0 -s 192.168.1.0/24 --dport 3128 -j ACCEPT
+        $iptables -A INPUT -p udp -i eth0 -s 192.168.1.0/24 --dport 20000:30000 -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth0 -s 192.168.1.0/24 --dport 7002 -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth0 -s 192.168.1.0/24 --dport 23000 -j ACCEPT
+        $iptables -A INPUT -p udp -i eth0 -s 192.168.1.0/24 --dport 5273 -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth0 -s 192.168.1.0/24 --dport 8080 -j ACCEPT
+        #iberando acesso a outras portas
+        $iptables -A INPUT -p tcp --dport 20 -j ACCEPT
+        $iptables -A INPUT -p tcp --dport 21 -j ACCEPT
+        $iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+        $iptables -A INPUT -p tcp --dport 23 -j ACCEPT
+        $iptables -A INPUT -p tcp --dport 25 -j ACCEPT
+        #$iptables -A INPUT -p udp -i eth1 --sport 500 --dport 500 -j ACCEPT
+        $iptables -A INPUT -p udp -i eth1 --sport 23000 --dport 23000 -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth1 --sport 23000 --dport 23000 -j ACCEPT
+        #$iptables -A INPUT -p udp -i ipsec0 --sport 500 --dport 500 -j ACCEPT
+        #$iptables -A OUTPUT -p udp -o eth1 --sport 500 --dport 500 -j ACCEPT
+        $iptables -A OUTPUT -p udp -o eth1 --sport 23000 --dport 23000 -j ACCEPT
+        $iptables -A OUTPUT -p tcp -o eth1 --sport 23000 --dport 23000 -j ACCEPT
+        #$iptables -A OUTPUT -p udp -o ipsec0 --sport 500 --dport 500 -j ACCEPT
+        #$iptables -A INPUT -p 50 -i eth1 -j ACCEPT
+        #$iptables -A OUTPUT -p 50 -o eth1 -j ACCEPT
+        #$iptables -A INPUT -p 50 -i ipsec0 -j ACCEPT
+        #$iptables -A OUTPUT -p 50 -o ipsec0 -j ACCEPT
+        $iptables -A INPUT -p udp --dport 53 -j ACCEPT
+        $iptables -A INPUT -p tcp --dport 53 -j ACCEPT
+        $iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+        $iptables -A INPUT -p tcp --dport 110 -j ACCEPT
+        $iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+        #$iptables -A INPUT -p tcp --dport 1863 --syn -j ACCEPT
+        #$iptables -A INPUT -p udp --dport 1863 -j ACCEPT
+        #$iptables -A INPUT -p udp --dport 5190 -j ACCEPT
+        #$iptables -A INPUT -p udp --dport 6901 -j ACCEPT
+        #$iptables -A INPUT -p tcp --dport 6901 --syn -j ACCEPT
+        #$iptables -A INPUT -p tcp --dport 6891:6900 --syn -j ACCEPT
+        $iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+        $iptables -A INPUT -p tcp --dport 23000 -j ACCEPT
+        #liberando respostas
+        $iptables -A INPUT -p tcp -i eth1 --dport 20 --syn -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth1 --dport 21 --syn -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth1 --dport 22 --syn -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth1 --dport 23 --syn -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth1 --dport 25 --syn -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth1 --dport 80 --syn -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth1 --dport 110 --syn -j ACCEPT
+        $iptables -A INPUT -p tcp -i eth1 --dport 443 --syn -j ACCEPT
+        $iptables -A INPUT -p udp -i eth1 --dport 500 -j ACCEPT
+        $iptables -A INPUT -p icmp --icmp-type 8 -i eth0 -j ACCEPT
+        $iptables -A INPUT -p icmp --icmp-type 0 -j ACCEPT
+        $iptables -A INPUT -p icmp -s 200.196.111.78 -d 200.196.111.135 -j ACCEPT
+        $iptables -A INPUT -p icmp -s 200.196.111.167 -d 200.196.111.135 -j ACCEPT
+        $iptables -A INPUT -p icmp -s 200.196.111.219 -d 200.196.111.135 -j ACCEPT
+        $iptables -A INPUT -p icmp -s 200.196.111.135 -d 200.196.111.78 -j ACCEPT
+        $iptables -A INPUT -p icmp -s 200.196.111.167 -d 200.196.111.78 -j ACCEPT
+        $iptables -A INPUT -p icmp -s 200.196.111.219 -d 200.196.111.78 -j ACCEPT
+        $iptables -A INPUT -p icmp --icmp-type 8 -i eth1 -j DROP
+        $iptables -A INPUT -p tcp --dport 3128 -j REJECT --reject-with tcp-reset
+        $iptables -A INPUT -j LOG --log-prefix "Pacote input descartado:"
+        $iptables -A INPUT -j DROP
+        #echo "Liberando resposta DNS"
+        $iptables -A INPUT -p udp -s 200.196.99.2 --sport 53 -d 200.196.111.135 -j ACCEPT
+        $iptables -A INPUT -p udp -s 200.196.99.3 --sport 53 -d 200.196.111.135 -j ACCEPT
+        $iptables -A INPUT -p udp -s 200.196.99.2 --sport 53 -d 200.196.111.78 -j ACCEPT
+        $iptables -A INPUT -p udp -s 200.196.99.3 --sport 53 -d 200.196.111.78 -j ACCEPT
+        $iptables -A INPUT -p udp -s 192.168.2.1 --sport 53 -d 192.168.1.1 -j ACCEPT
+        $iptables -A INPUT -i eth1 -f -j LOG --log-prefix "Pacote input fragmentado:"
+        $iptables -A INPUT -i eth1 -f -j DROP
+        #echo "Monitorando portas proibidas"
+        $iptables -A INPUT -p tcp --dport 21 -j LOG --log-prefix "Porta FTP:"
+        $iptables -A INPUT -p tcp --dport 22 -j LOG --log-prefix "Porta SSH:"
+        $iptables -A INPUT -p tcp --dport 23 -j LOG --log-prefix "Porta TELNET:"
+        $iptables -A INPUT -p tcp --dport 137:139 -j LOG --log-prefix "Porta NETBUI:"
+        #echo "Monitorando BackDoors..."
+        $iptables -A INPUT -p tcp --dport 5042 -j LOG --log-prefix "Porta Wincrash:"
+        $iptables -A INPUT -p tcp --dport 12345 -j LOG --log-prefix "Porta BackOrifice:"
+        #echo "Configurando navegaÁ„o..Repasse(FORWARD)"
+        $iptables -A FORWARD -p tcp --syn -m limit --limit 1/s -j ACCEPT
+        $iptables -A FORWARD -p icmp --icmp-type echo-request -m limit --limit 1/s -j ACCEPT
+        $iptables -A FORWARD -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j ACCEPT
+        $iptables -A FORWARD -m state --state INVALID -j DROP
+        $iptables -A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+        $iptables -A FORWARD -p udp -s 192.168.1.0/24 -d 200.196.99.2 --dport 53 -j ACCEPT
+        $iptables -A FORWARD -p udp -s 192.168.1.0/24 -d 200.196.99.3 --dport 53 -j ACCEPT
+        $iptables -A FORWARD -p udp -s 200.196.99.2 --sport 53 -d 192.168.1.0/24 -j ACCEPT
+        $iptables -A FORWARD -p udp -s 200.196.99.3 --sport 53 -d 192.168.1.0/24 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 20 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 20 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 21 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 21 -j ACCEPT
+$iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 21 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 21 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 22 -j ACCEPT
+        $iptables -A FORWARD -i eth0 -o eth1 -p tcp --dport 22 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 25 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 25 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 110 -j ACCEPT
+        $iptables -A FORWARD -i eth0 -o eth1 -p tcp --dport 110 -j ACCEPT
+        $iptables -A FORWARD -i eth0 -o eth1 -p tcp --dport 23000 -j ACCEPT
+        $iptables -A FORWARD -p tcp -s 192.168.2.0/24 -d 192.168.1.0/24 -j ACCEPT
+        $iptables -A FORWARD -p udp -s 192.168.1.0/24 -d 192.168.2.0/24 -j ACCEPT
+        $iptables -A FORWARD -d 192.168.1.0/24 -i ipsec0 -j ACCEPT
+        $iptables -A FORWARD -s 192.168.1.0/24 -i eth0 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 1863 -j ACCEPT
+        $iptables -A FORWARD -i eth0 -o eth1 -p tcp --dport 1863 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p udp --dport 1863 -j ACCEPT
+        $iptables -A FORWARD -i eth0 -o eth1 -p udp --dport 1863 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 6901 -j ACCEPT
+        $iptables -A FORWARD -i eth0 -o eth1 -p tcp --dport 6901 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p udp --dport 6901 -j ACCEPT
+        $iptables -A FORWARD -i eth0 -o eth1 -p udp --dport 6901 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 6891:6900 -j ACCEPT
+        $iptables -A FORWARD -i eth0 -o eth1 -p tcp --dport 6891:6900 -j ACCEPT
+        $iptables -A FORWARD -i eth1 -o eth0 -p udp --dport 5190 -j ACCEPT
+        $iptables -A FORWARD -i eth0 -o eth1 -p udp --dport 5190 -j ACCEPT
+        $iptables -A FORWARD -j LOG --log-prefix "Pacote forward descartado:"
+        $iptables -A FORWARD -j DROP
+        $iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE
+        #echo "tentando redirecionar portas.."
+        #$iptables -t nat -A PREROUTING -j DNAT -i eth0 -p tcp --dport 23000 --to 192.168.1.57:23000
+        #$iptables -t nat -A PREROUTING -j DNAT -i eth0 -p udp --dport 23000 --to 192.168.1.57:23000
+        #$iptables -t nat -A POSTROUTING -p tcp -m tcp -s 192.168.1.57 --sport 23000 -j MASQUERADE -o eth1 --to-ports 23000
+        #$iptables -t nat -A POSTROUTING -p udp -m udp -s 192.168.1.57 --sport 23000 -j MASQUERADE -o eth1 --to-ports 23000
+        $iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 80 -j REDIRECT --to-port 3128
+        $iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 443 -j REDIRECT --to-port 3128
+        ;;
+        stop)
+        gprintf "Parando o serviÁo de %s: " "IPtables"
+        $iptables -F
+        $iptables -X
+        $iptables -F -t nat
+        #$iptables -F -t mangle
+        echo
+        ;;
+        restart)
+        gprintf "Reiniciando o serviÁo de %s: " "IPtables"
+        $0 stop
+        $0 start
+        echo
+        ;;
+        status)
+        gprintf "Status do serviÁo de $prog"
+        $iptables -L
+        $iptables -L -t nat
+        #$iptables -L -t mangle
+        echo
+        ;;
+        *)
+        gprintf "Uso: iptables {start|stop|restart|status}"
+        echo
+        ;;
+esac
+exit 0
+
+________________________________________________________________________________________________proto
+
+_____________________________________________________________________________________________________
+__________________________________firewall ________________________________________para redes simples
+
+################################################################################
+
+PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+
+if [ -f /etc/iptables.conf ]; then
+  . /etc/iptables.conf
+fi
+
+### REGRAS DE FILTRAGEM ########################################################
+
+start() {
+
+  # Inicializa as tables e chains
+  iptables -F
+  iptables -F -t nat
+  iptables -F -t mangle
+  iptables -P INPUT    DROP
+  iptables -P FORWARD  DROP
+  iptables -P OUTPUT   ACCEPT
+
+
+  echo "Habilitando o Reecaminhamento de pacotes"
+  echo 1 > /proc/sys/net/ipv4/ip_forward #habilita o reencaminhamento de pacotes entre as interfaces de rede
+  echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
+  echo 1 > /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
+  echo 0 > $i/accept_redirects
+  echo 0 > $i/accept_source_route
+  echo 1 > $i/log_martians
+  echo 0 > $i/rp_filter
+  iptables -A OUTPUT -o eth0 -p tcp --dport 139 -j DROP
+
+  echo "Bloqueando servicos nao utilizados na Internet"
+  iptables -A OUTPUT -o eth0 -p tcp --dport 139 -j DROP #bloqueia todas as solicitacoes na porta 139, porque tem virus que saem procurando a porta NETBIOS (137,138 e 139), tcp e udp, para infectar os windows!
+  iptables -A OUTPUT -o ppp0 -p tcp --dport 139 -j DROP
+  iptables -A OUTPUT -o eth1 -p tcp --dport 139 -j DROP
+
+  echo "Libera pacotes locais loopback"
+  iptables -A INPUT -i lo -j ACCEPT
+
+  echo Ignora pacotes com endereÁos reservados vindos pela Internet
+  if [ "$RESERV" = "S" ]; then
+    for res in 8 1.0.0.0/8 2.0.0.0/8 5.0.0.0/8 7.0.0.0/8 10.0.0.0/8 \
+            23.0.0.0/8 27.0.0.0/8 31.0.0.0/8 36.0.0.0/8 39.0.0.0/8 41.0.0.0/8 \
+            42.0.0.0/8 58.0.0.0/8 59.0.0.0/8 60.0.0.0/8 127.0.0.0/8 \
+            169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 197.0.0.0/8 \
+            224.0.0.0/3 240.0.0.0/8 ; do
+      iptables -A INPUT -i $OUTDEV -s $res -j DROP
+    done
+  fi
+
+  echo "Ativa proxy transparente"
+  if [ "$TRANS" = "S" ]; then
+    iptables -t nat -A PREROUTING -i $INTDEV -p tcp --dport 80 \
+                                  -j REDIRECT --to-ports 3128
+    iptables -t nat -A PREROUTING -i $INTDEV -p udp --dport 80 \
+                                  -j REDIRECT --to-ports 3128
+  fi
+
+   echo "Liberando o acesso ao squid e outras portas"
+
+   iptables -A INPUT -p tcp -i eth0 -s 10.1.100.0/24 --dport 8080 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 20 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 21 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 23 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 25 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 110 -j ACCEPT
+
+echo "Monitorando portas proibidas"
+iptables -A INPUT -p tcp --dport 21 -j LOG --log-prefix "Porta FTP:"
+iptables -A INPUT -p tcp --dport 22 -j LOG --log-prefix "Porta SSH:"
+iptables -A INPUT -p tcp --dport 3389 -j LOG --log-prefix "Porta terminal:"
+iptables -A INPUT -p tcp --dport 22 -j LOG --log-prefix "Porta SSH:"
+iptables -A INPUT -p tcp --dport 23 -j LOG --log-prefix "Porta TELNET:"
+iptables -A INPUT -p tcp --dport 137:139 -j LOG --log-prefix "Porta NETBUI:"
+iptables -A INPUT -p tcp -i eth2 --dport 31337 -j DROP
+iptables -A INPUT -p udp -i eth2 --dport 31337 -j DROP
+iptables -A INPUT -p tcp -i eth2 --dport 12345:12346 -j DROP
+iptables -A INPUT -p udp -i eth2 --dport 12345:12346 -j DROP
+iptables -A INPUT -p tcp -i eth2 --dport 1524 -j DROP
+iptables -A INPUT -p tcp -i eth2 --dport 27665 -j DROP
+iptables -A INPUT -p udp -i eth2 --dport 27444 -j DROP
+iptables -A INPUT -p udp -i eth2 --dport 31335 -j DROP
+iptables -A INPUT -p tcp -i eth2 --dport 113 -j REJECT
+iptables -A INPUT -p udp -i eth2 --dport 113 -j REJECT
+iptables -A INPUT -p tcp -i eth2 --dport 5999:6003 -j DROP
+iptables -A INPUT -p udp -i eth2 --dport 5999:6003 -j DROP
+iptables -A INPUT -p tcp -i eth2 --dport 7100 -j DROP
+iptables -A INPUT -p udp -s 0/0 -i eth2 --dport 33435:33525 -j DROP
+iptables -A INPUT -p tcp --dport 23 -j LOG --log-prefix "Porta TELNET:"
+ echo "Liberando acesso da Rede Interna" #neste momento vai ser liberada a entrada da rede na internet e o redirecionamento de pacotes.
+iptables -A INPUT -i eth0 -s 10.1.100.0/24 -j ACCEPT
+iptables -A FORWARD -i eth0 -p tcp -s 10.1.100.0/24 -j ACCEPT #libera todas as portas tcp para a rede interna
+iptables -A FORWARD -i eth0 -p udp -s 10.1.100.0/24 -j ACCEPT
+iptables -A INPUT -p icmp -j ACCEPT
+iptables -A INPUT -i eth1 -s 10.2.100.0/24 -j ACCEPT
+iptables -A INPUT -i eth2 -s 10.3.100.0/24 -j ACCEPT
+iptables -A FORWARD -i eth1 -p tcp -s 10.2.100.0/24 -j ACCEPT #libera todas as portas tcp para a rede interna
+iptables -A FORWARD -i eth2 -p tcp -s 10.3.100.0/24 -j ACCEPT #libera todas as portas tcp para a rede interna
+iptables -A FORWARD -i eth1 -p udp -s 10.2.100.0/24 -j ACCEPT
+iptables -A FORWARD -i eth2 -p udp -s 10.3.100.0/24 -j ACCEPT
+iptables -A INPUT -p icmp -j ACCEPT
+#Redirecionar Porta SMTP
+# iptables -t nat -A PREROUTING -i ethx -p tcp --dport 25 -j DNAT --to 192.168.1.1
+#Redirecionar Porta POP
+
+   echo "Liberando acesso a Internet"
+   iptables -A FORWARD -i eth0 -p udp -m state --state ESTABLISHED -j ACCEPT
+   iptables -A INPUT -i eth0 -p tcp -m state --state ESTABLISHED -j ACCEPT
+   iptables -t nat -A POSTROUTING -o ppp0 -j MASQUERADE #regra que ativa o nat dinamico
+   iptables -A INPUT -i ppp0 -p tcp -m state --state ESTABLISHED -j ACCEPT
+   iptables -A INPUT -i ppp0 -p udp -m state --state ESTABLISHED -j ACCEPT
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE #regra que ativa o nat dinamico
+iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE #regra que ativa o nat dinamico
+iptables -A FORWARD -i eth0 -p tcp -m state --state ESTABLISHED -j ACCEPT #especifica o STATFULL (estado completo), define que so vai entrar na FORWARD, tudo que for resposta de algo que vem de dentro da rede.
+iptables -A FORWARD -i eth0 -p udp -m state --state ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i eth1 -p udp -m state --state ESTABLISHED -j ACCEPT
+
+iptables -A INPUT -i eth0 -p tcp -m state --state ESTABLISHED -j ACCEPT
+iptables -A INPUT -i eth1 -p tcp -m state --state ESTABLISHED -j ACCEPT
+iptables -A INPUT -i eth0 -p udp -m state --state ESTABLISHED -j ACCEPT
+iptables -A INPUT -i eth1 -p udp -m state --state ESTABLISHED -j ACCEPT
+
+iptables -t nat -A POSTROUTING -o ppp0 -j MASQUERADE #regra que ativa o nat dinamico
+iptables -A FORWARD -i eth0 -p tcp -m state --state ESTABLISHED -j ACCEPT #especifica o STATFULL (estado completo), define que so vai entrar na FORWARD, tudo que for resposta de algo que vem de dentro da rede.
+iptables -A FORWARD -i eth0 -p udp -m state --state ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i eth1 -p udp -m state --state ESTABLISHED -j ACCEPT
+
+echo "Bloqueio a IP spoofing"
+iptables -N syn-flood
+iptables -A INPUT -i eth0 -p tcp --syn -j syn-flood
+iptables -A syn-flood -m limit --limit 1/s --limit-burst 4 -j RETURN
+iptables -A syn-flood -j DROP
+
+echo "Bloqueando tracertroute"
+iptables -A INPUT -p udp -s 0/0 -i eth0 --dport 33435:33525 -j DROP
+iptables -A INPUT -p udp -s 0/0 -i eth2 --dport 33435:33525 -j DROP
+
+   echo "Libera forward com destino a Internet e faz masquerade"
+  if [ "$MASQ" = "S" ]; then
+    iptables -A FORWARD -i ! $OUTDEV -j ACCEPT
+    iptables -A FORWARD -p tcp -d 10.2.100.100 --dport 110 -j ACCEPT
+    iptables -t nat -A PREROUTING -p tcp -d 10.2.100.100 --dport 110 -j DNAT --to 192.16.6.2:110
+    iptables -A FORWARD -p tcp -d 10.1.100.100 --dport 143 -j ACCEPT
+    iptables -A FORWARD -p tcp -d 10.1.100.100 --dport 110 -j ACCEPT
+    iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 20 -j ACCEPT
+    iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 21 -j ACCEPT
+    iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 22 -j ACCEPT
+    iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 25 -j ACCEPT
+    iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 110 -j ACCEPT
+    iptables -A FORWARD -j DROP
+    iptables -t nat -A POSTROUTING -o $OUTDEV -j MASQUERADE
+    for module in $NATMOD ; do
+      modprobe ip_nat_$module
+    done
+  fi
+ echo "Libera conexıes j· estabelecidas"
+  iptables -A INPUT   -m state --state ESTABLISHED,RELATED -j ACCEPT
+  iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+  echo "Libera alguns serviÁos ICMP evitando inundaÁ„o de pacotes"
+  iptables -A INPUT -p icmp --icmp-type destination-unreachable \
+                    -m limit --limit 1/s -j ACCEPT
+  iptables -A INPUT -p icmp --icmp-type time-exceeded \
+                    -m limit --limit 1/s -j ACCEPT
+  iptables -A INPUT -p icmp --icmp-type echo-reply \
+                    -m limit --limit 1/s -j ACCEPT
+  iptables -A INPUT -p icmp --icmp-type echo-request \
+                    -m limit --limit 1/s -j ACCEPT
+
+  echo "Libera serviÁos locais"
+  wIFS=$IFS
+  IFS=,
+  for port in $OUTTCP ; do
+    iptables -A INPUT -i $OUTDEV -p tcp --syn -m limit --limit 1/s \
+                                        --dport $port -j ACCEPT
+
+   iptables -A INPUT -p tcp -d 10.1.100.100 --dport 80 -j ACCEPT #web
+   iptables -A INPUT -p tcp -d 10.1.100.100 --dport 25 -j ACCEPT #smtp
+   iptables -A INPUT -p tcp -d 10.1.100.100 --dport 22 -j ACCEPT #ssh
+   iptables -A INPUT -p tcp -d 10.1.100.100 --dport 53 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 53 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 902 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 8222 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 8333 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 25 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 110 -j ACCEPT
+   iptables -A INPUT -p tcp -d 10.1.100.100 --dport 10000 -j ACCEPT #webmim
+    iptables -A INPUT -i $OUTDEV -p tcp --tcp-flags SYN,ACK,FIN,RST RST \
+                                 -m limit --limit 1/s --dport $port -j ACCEPT
+  done
+  for port in $OUTUDP ; do
+    iptables -A INPUT -i $OUTDEV -p udp --dport $port -j ACCEPT
+  done
+  if [ "$INTDEV" != "$OUTDEV" ]; then
+    for port in $INTTCP ; do
+      iptables -A INPUT -i $INTDEV -p tcp --syn -m limit --limit 1/s \
+                                          --dport $port -j ACCEPT
+      iptables -A INPUT -i $INTDEV -p tcp --tcp-flags SYN,ACK,FIN,RST RST \
+                                   -m limit --limit 1/s --dport $port -j ACCEPT
+    done
+    for port in $INTUDP ; do
+      iptables -A INPUT -i $INTDEV -p udp --dport $port -j ACCEPT
+    done
+  fi
+  IFS=$wIFS
+
+  echo "Carrega mÛdulos conntrack"
+  for module in $CONNTRACK ; do
+    modprobe ip_conntrack_$module
+  done
+}
+
+stop() {
+  echo Inicializa as tables e chains
+  iptables -F
+  iptables -F -t nat
+  iptables -F -t mangle
+  iptables -P INPUT    ACCEPT
+  iptables -P FORWARD  ACCEPT
+  iptables -P OUTPUT   ACCEPT
+  modprobe -r `lsmod | grep ^ip_conntrack | cut -f2 -d[ | cut -f1 -d]`
+  modprobe -r `lsmod | grep ^iptable_nat | cut -f2 -d[ | cut -f1 -d]`
+  modprobe -r `lsmod | grep ^ip_tables | cut -f2 -d[ | cut -f1 -d]`
+}
+
+case $1 in
+  start) start ;;
+  stop)  stop ;;
+esac
+______________________firewall para redes simples________bom slackware______________proto__iptableth0
+
+_____________________________________________________________________________________________________________________________________firewall simples_treinamento_novintec_________________________________
+#!/bin/bash
+
+case $1 in
+start)
+
+echo "Carregando modulos adicionais"
+modprobe ip_conntrack_ftp #
+modprobe ip_nat_ftp
+
+echo "Resetando todas as regras"
+iptables -F #reseta todas as regras do iptable
+iptables -t nat -F #reseta todas as regras do nat
+
+echo "Fechando todas as politicas"
+iptables -P INPUT DROP #fecha todas as politicas de INPUT
+iptables -P FORWARD DROP #fecha todas as politicas de FORWARD
+
+echo "Habilitando o Reecaminhamento de pacotes"
+echo 1 > /proc/sys/net/ipv4/ip_forward #habilita o reencaminhamento de pacotes entre as interfaces de rede
+echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
+echo 1 > /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
+echo 0 > $i/accept_redirects
+echo 0 > $i/accept_source_route
+echo 1 > $i/log_martians
+echo 0 > $i/rp_filter
+iptables -A OUTPUT -o eth0 -p tcp --dport 139 -j DROP
+
+echo "Liberando acesso para o LoopBack"
+iptables -A INPUT -i lo -j ACCEPT #tudo que vier do loopback, aceita!
+
+echo "Bloqueando servicos nao utilizados na Internet"
+iptables -A OUTPUT -o eth0 -p tcp --dport 139 -j DROP #bloqueia todas as solicitacoes na porta 139, porque tem virus que saem procurando a porta NETBIOS (137,138 e 139), tcp e udp, para infectar os windows!
+iptables -A OUTPUT -o ppp0 -p tcp --dport 139 -j DROP
+iptables -A OUTPUT -o eth1 -p tcp --dport 139 -j DROP
+echo "Liberando o acesso ao squid e outras portas"
+
+iptables -A INPUT -p tcp -i eth0 -s 10.1.100.0/24 --dport 8080 -j ACCEPT
+iptables -A INPUT -p tcp --dport 20 -j ACCEPT
+iptables -A INPUT -p tcp --dport 21 -j ACCEPT
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+iptables -A INPUT -p tcp --dport 23 -j ACCEPT
+iptables -A INPUT -p tcp --dport 25 -j ACCEPT
+iptables -A INPUT -p tcp --dport 110 -j ACCEPT
+
+echo "Monitorando portas proibidas"
+iptables -A INPUT -p tcp --dport 21 -j LOG --log-prefix "Porta FTP:"
+iptables -A INPUT -p tcp --dport 22 -j LOG --log-prefix "Porta SSH:"
+iptables -A INPUT -p tcp --dport 23 -j LOG --log-prefix "Porta TELNET:"
+#iptables -A INPUT -p tcp --dport 137:139 -j LOG --log-prefix "Porta NETBUI:"
+
+echo "Liberando acesso da Rede Interna" #neste momento vai ser liberada a entrada da rede na internet e o redirecionamento de pacotes.
+iptables -A INPUT -i eth0 -s 10.1.100.0/24 -j ACCEPT
+iptables -A FORWARD -i eth0 -p tcp -s 10.1.100.0/24 -j ACCEPT #libera todas as portas tcp para a rede interna
+iptables -A FORWARD -i eth0 -p udp -s 10.1.100.0/24 -j ACCEPT
+iptables -A INPUT -p icmp -j ACCEPT
+
+echo "Liberando acesso a Internet"
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE #regra que ativa o nat dinamico
+iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE #regra que ativa o nat dinamico
+iptables -t nat -A POSTROUTING -o eth2 -j MASQUERADE #regra que ativa o nat dinamico
+iptables -A FORWARD -i eth0 -p tcp -m state --state ESTABLISHED -j ACCEPT #especifica o STATFULL (estado completo), define que so vai entrar na FORWARD, tudo que for resposta de algo que vem de dentro da rede.
+iptables -A FORWARD -i eth0 -p udp -m state --state ESTABLISHED -j ACCEPT
+iptables -A INPUT -i eth0 -p tcp -m state --state ESTABLISHED -j ACCEPT
+iptables -t nat -A POSTROUTING -o ppp0 -j MASQUERADE #regra que ativa o nat dinamico
+iptables -A INPUT -i ppp0 -p tcp -m state --state ESTABLISHED -j ACCEPT
+iptables -A INPUT -i ppp0 -p udp -m state --state ESTABLISHED -j ACCEPT
+echo "Liberando servicos"
+iptables -A INPUT -p tcp -d 10.1.100.100 --dport 80 -j ACCEPT #web
+iptables -A INPUT -p tcp -d 10.1.100.100 --dport 25 -j ACCEPT #smtp
+iptables -A INPUT -p tcp -d 10.1.100.100 --dport 22 -j ACCEPT #ssh
+iptables -A INPUT -p tcp -d 10.1.100.100 --dport 21 -j ACCEPT #telnet
+iptables -A INPUT -p tcp -d 10.1.100.100 --dport 53 -j ACCEPT
+iptables -A INPUT -p udp -d 10.1.100.100 --dport 53 -j ACCEPT
+iptables -A INPUT -p udp -d 10.1.100.100 --dport 902 -j ACCEPT
+iptables -A INPUT -p udp -d 10.1.100.100 --dport 8222 -j ACCEPT
+iptables -A INPUT -p udp -d 10.1.100.100 --dport 8333 -j ACCEPT
+iptables -A INPUT -p udp -d 10.1.100.100 --dport 25 -j ACCEPT
+iptables -A INPUT -p udp -d 10.1.100.100 --dport 110 -j ACCEPT
+iptables -A INPUT -p tcp -d 10.1.100.100 --dport 10000 -j ACCEPT #webmim
+
+#echo "Habilitando proxy transparente"
+
+#iptables -t nat -A PREROUTING -i eth0 -p tcp -dport 80 -j REDIRECT -to-port 3128
+
+echo "Habilitando nat estatico"
+#Acesso Terminal Service
+#iptables -A FORWARD -p tcp -d 10.1.100.100 --dport 110 -j ACCEPT
+#iptables -t nat -A PREROUTING -p tcp -d 10.1.100.100 --dport 110 -j DNAT --to 192.16.6.2:110
+iptables -A FORWARD -p tcp -d 10.2.100.100 --dport 110 -j ACCEPT
+iptables -t nat -A PREROUTING -p tcp -d 10.2.100.100 --dport 110 -j DNAT --to 192.16.6.2:110
+iptables -A FORWARD -p tcp -d 10.1.100.100 --dport 143 -j ACCEPT
+iptables -A FORWARD -p tcp -d 10.1.100.100 --dport 110 -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 20 -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 21 -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 22 -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 25 -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 110 -j ACCEPT
+#iptables -A FORWARD -j LOG --log-prefix "Pacote forward descartado:"
+iptables -A FORWARD -j DROP
+
+;;
+stop)
+
+echo "Desligando o Firewall"
+iptables -F
+iptables -F -t nat
+iptables -P INPUT ACCEPT
+iptables -P FORWARD ACCEPT
+echo 0 > /proc/sys/net/ipv4/ip_forward #desativa o reencaminhamento de pacotes
+
+;;
+*) echo "Use firewall (start | stop)" ;;
+
+esac
+
+____________________________________________________________________________________________pronto___
+
+################################################################################
+
+PATH=$PATH:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+
+if [ -f /etc/iptables.conf ]; then
+  . /etc/iptables.conf
+fi
+
+### REGRAS DE FILTRAGEM ########################################################
+
+start() {
+
+  # Inicializa as tables e chains
+  iptables -F
+  iptables -F -t nat
+  iptables -F -t mangle
+  iptables -P INPUT    DROP
+  iptables -P FORWARD  DROP
+  iptables -P OUTPUT   ACCEPT
+
+
+  echo "Habilitando o Reecaminhamento de pacotes"
+  echo 1 > /proc/sys/net/ipv4/ip_forward #habilita o reencaminhamento de pacotes entre as interfaces de rede
+  echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
+  echo 1 > /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
+  echo 0 > $i/accept_redirects
+  echo 0 > $i/accept_source_route
+  echo 1 > $i/log_martians
+  echo 0 > $i/rp_filter
+  iptables -A OUTPUT -o eth0 -p tcp --dport 139 -j DROP
+
+  echo "Bloqueando servicos nao utilizados na Internet"
+  iptables -A OUTPUT -o eth0 -p tcp --dport 139 -j DROP #bloqueia todas as solicitacoes na porta 139, porque tem virus que saem procurando a porta NETBIOS (137,138 e 139), tcp e udp, para infectar os windows!
+  iptables -A OUTPUT -o ppp0 -p tcp --dport 139 -j DROP
+ iptables -A OUTPUT -o eth1 -p tcp --dport 139 -j DROP
+
+  echo "Libera pacotes locais loopback"
+  iptables -A INPUT -i lo -j ACCEPT
+
+  echo Ignora pacotes com endereÁos reservados vindos pela Internet
+  if [ "$RESERV" = "S" ]; then
+    for res in 8 1.0.0.0/8 2.0.0.0/8 5.0.0.0/8 7.0.0.0/8 10.0.0.0/8 \
+            23.0.0.0/8 27.0.0.0/8 31.0.0.0/8 36.0.0.0/8 39.0.0.0/8 41.0.0.0/8 \
+            42.0.0.0/8 58.0.0.0/8 59.0.0.0/8 60.0.0.0/8 127.0.0.0/8 \
+            169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 197.0.0.0/8 \
+            224.0.0.0/3 240.0.0.0/8 ; do
+      iptables -A INPUT -i $OUTDEV -s $res -j DROP
+    done
+  fi
+
+  echo "Ativa proxy transparente"
+  if [ "$TRANS" = "S" ]; then
+    iptables -t nat -A PREROUTING -i $INTDEV -p tcp --dport 80 \
+                                  -j REDIRECT --to-ports 3128
+    iptables -t nat -A PREROUTING -i $INTDEV -p udp --dport 80 \
+                                  -j REDIRECT --to-ports 3128
+  fi
+
+   echo "Liberando o acesso ao squid e outras portas"
+
+   iptables -A INPUT -p tcp -i eth0 -s 10.1.100.0/24 --dport 8080 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 20 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 21 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 23 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 25 -j ACCEPT
+   iptables -A INPUT -p tcp --dport 110 -j ACCEPT
+
+   echo "Monitorando portas proibidas"
+   iptables -A INPUT -p tcp --dport 21 -j LOG --log-prefix "Porta FTP:"
+   iptables -A INPUT -p tcp --dport 22 -j LOG --log-prefix "Porta SSH:"
+ iptables -A INPUT -p tcp --dport 23 -j LOG --log-prefix "Porta TELNET:"
+
+   echo "Liberando acesso da Rede Interna" #neste momento vai ser liberada a entrada da rede na internet e o redirecionamento de pacotes.
+   iptables -A INPUT -i eth0 -s 10.1.100.0/24 -j ACCEPT
+   iptables -A FORWARD -i eth0 -p tcp -s 10.1.100.0/24 -j ACCEPT #libera todas as portas tcp para a rede interna
+   iptables -A FORWARD -i eth0 -p udp -s 10.1.100.0/24 -j ACCEPT
+   iptables -A INPUT -p icmp -j ACCEPT
+
+   echo "Liberando acesso a Internet"
+   iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE #regra que ativa o nat dinamico
+   iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE #regra que ativa o nat dinamico
+   iptables -A FORWARD -i eth0 -p tcp -m state --state ESTABLISHED -j ACCEPT #especifica o STATFULL (estado completo), define que so vai entrar na FORWARD, tudo que for resposta de algo que vem de dentro da rede.
+   iptables -A FORWARD -i eth0 -p udp -m state --state ESTABLISHED -j ACCEPT
+   iptables -A INPUT -i eth0 -p tcp -m state --state ESTABLISHED -j ACCEPT
+   iptables -t nat -A POSTROUTING -o ppp0 -j MASQUERADE #regra que ativa o nat dinamico
+   iptables -A INPUT -i ppp0 -p tcp -m state --state ESTABLISHED -j ACCEPT
+   iptables -A INPUT -i ppp0 -p udp -m state --state ESTABLISHED -j ACCEPT
+
+   echo "Libera forward com destino a Internet e faz masquerade"
+  if [ "$MASQ" = "S" ]; then
+    iptables -A FORWARD -i ! $OUTDEV -j ACCEPT
+    iptables -A FORWARD -p tcp -d 10.2.100.100 --dport 110 -j ACCEPT
+    iptables -t nat -A PREROUTING -p tcp -d 10.2.100.100 --dport 110 -j DNAT --to 192.16.6.2:110
+    iptables -A FORWARD -p tcp -d 10.1.100.100 --dport 143 -j ACCEPT
+    iptables -A FORWARD -p tcp -d 10.1.100.100 --dport 110 -j ACCEPT
+    iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 20 -j ACCEPT
+    iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 21 -j ACCEPT
+    iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 22 -j ACCEPT
+    iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 25 -j ACCEPT
+    iptables -A FORWARD -i eth1 -o eth0 -p tcp --dport 110 -j ACCEPT
+    iptables -A FORWARD -j DROP
+    iptables -t nat -A POSTROUTING -o $OUTDEV -j MASQUERADE
+    for module in $NATMOD ; do
+     modprobe ip_nat_$module
+    done
+  fi
+
+  echo "Libera conexıes j· estabelecidas"
+  iptables -A INPUT   -m state --state ESTABLISHED,RELATED -j ACCEPT
+  iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+  echo "Libera alguns serviÁos ICMP evitando inundaÁ„o de pacotes"
+  iptables -A INPUT -p icmp --icmp-type destination-unreachable \
+                    -m limit --limit 1/s -j ACCEPT
+  iptables -A INPUT -p icmp --icmp-type time-exceeded \
+                    -m limit --limit 1/s -j ACCEPT
+  iptables -A INPUT -p icmp --icmp-type echo-reply \
+                    -m limit --limit 1/s -j ACCEPT
+  iptables -A INPUT -p icmp --icmp-type echo-request \
+                    -m limit --limit 1/s -j ACCEPT
+
+  echo "Libera serviÁos locais"
+  wIFS=$IFS
+  IFS=,
+  for port in $OUTTCP ; do
+    iptables -A INPUT -i $OUTDEV -p tcp --syn -m limit --limit 1/s \
+                                        --dport $port -j ACCEPT
+
+   iptables -A INPUT -p tcp -d 10.1.100.100 --dport 80 -j ACCEPT #web
+   iptables -A INPUT -p tcp -d 10.1.100.100 --dport 25 -j ACCEPT #smtp
+   iptables -A INPUT -p tcp -d 10.1.100.100 --dport 22 -j ACCEPT #ssh
+   iptables -A INPUT -p tcp -d 10.1.100.100 --dport 53 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 53 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 902 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 8222 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 8333 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 25 -j ACCEPT
+   #iptables -A INPUT -p udp -d 10.1.100.100 --dport 110 -j ACCEPT
+   iptables -A INPUT -p tcp -d 10.1.100.100 --dport 10000 -j ACCEPT #webmim
+    iptables -A INPUT -i $OUTDEV -p tcp --tcp-flags SYN,ACK,FIN,RST RST \
+    iptables -A INPUT -i $OUTDEV -p tcp --tcp-flags SYN,ACK,FIN,RST RST \
+                                 -m limit --limit 1/s --dport $port -j ACCEPT
+  done
+  for port in $OUTUDP ; do
+    iptables -A INPUT -i $OUTDEV -p udp --dport $port -j ACCEPT
+  done
+  if [ "$INTDEV" != "$OUTDEV" ]; then
+    for port in $INTTCP ; do
+      iptables -A INPUT -i $INTDEV -p tcp --syn -m limit --limit 1/s \
+                                          --dport $port -j ACCEPT
+      iptables -A INPUT -i $INTDEV -p tcp --tcp-flags SYN,ACK,FIN,RST RST \
+                                   -m limit --limit 1/s --dport $port -j ACCEPT
+    done
+    for port in $INTUDP ; do
+      iptables -A INPUT -i $INTDEV -p udp --dport $port -j ACCEPT
+    done
+  fi
+  IFS=$wIFS
+
+  echo "Carrega mÛdulos conntrack"
+  for module in $CONNTRACK ; do
+    modprobe ip_conntrack_$module
+  done
+}
+
+stop() {
+  echo Inicializa as tables e chains
+  iptables -F
+  iptables -F -t nat
+  iptables -F -t mangle
+  iptables -P INPUT    ACCEPT
+  iptables -P FORWARD  ACCEPT
+  iptables -P OUTPUT   ACCEPT
+  modprobe -r `lsmod | grep ^ip_conntrack | cut -f2 -d[ | cut -f1 -d]`
+  modprobe -r `lsmod | grep ^iptable_nat | cut -f2 -d[ | cut -f1 -d]`
+  modprobe -r `lsmod | grep ^ip_tables | cut -f2 -d[ | cut -f1 -d]`
+}
+
+case $1 in
+  start) start ;;
+  stop)  stop ;;
+esac
+____________________________________________________________________________________________proto____
+
+_______________________________modulos para firewall_______________________________________rc.fir____
+modprobe ip_tables # Requerido; todos os mÛdulos ipv4 dependem deste
+
+modprobe ipt_limit # Aceita logs limitados
+
+modprobe ipt_state # Permite checar estado de pacotes (SYN, SYN-ACK, ACK, e assim por diante).
+
+modprobe ip_conntrack # Permite conex„o e pacotes desfragmentados.
+
+modprobe ip_conntrack_ftp # Permite ativa FTP; requer ip_conntrack
+
+modprobe ipt_multiport # Aceita pacotes especifico em multiplas portas
+
+modprobe iptable_filter # Implementando as tabelas de filtros
+
+modprobe ip_queue # Allows queuing packets to user space
+
+modprobe ipt_ttl # Aceita manipulaÁ„o ttl (n„o suportado :-( )
+
+modprobe ipt_mac # Aceita MAC address especificos
+
+modprobe ipt_owner # Permite usu·rio/grupo checar pacotes OUTPUT ativos
+
+modprobe ip_conntrack_egg
+
+modprobe ip_conntrack_irc ports=6661,6662,6663,6664,6665,6666,6667,6668 # Permite pacotes do IRC
+
+modprobe ip_nat_irc ports=6661,6662,6663,6664,6665,6666,6667,6668 # Permite o irc trabalha em NAT
+
+modprobe ipt_tcpmss # Permite checar pacotes ativo TCPMSS
+
+modprobe iptable_nat # Implementando tabelas nat
+
+modprobe ip_nat_ftp # Permite ativa FTP via nat; requer ip_conntrack, iptables_nat
+
+modprobe iptable_mangle # Implementando tabelas mangle
+____________________________________________________________________________________________________________________________________________________________________________________________________________>		pwd
+/etc/rc.d/init.d/iptables
+>	chmod -x firewall
+>	chkconfig --add firewall
+pacote debian systemctl start firewall
+	      systemctl enable firewall
+>	/etc/rc.d/init.d/iptables stop
+>	/etc/rc.d/init.d/iptables start
+_______________________________________________comandos______________________________________________
+>	iptables -V
+			vers„o do iptables
+>	iptables -L -n -v
+			Mostra todas as Politica INTPUT e OUTPUT
+FORWARD		Tudo que sai para fora
+
+>	iptables -L -n -v -t nat
+			Mostra Tabelas de Nat
+>	POSTROUTING	politica de saida
+>	PREROUTING	politica de entrada
+
+>iptables -P INPUT DROP   |
+>iptables -P FORWARD DROP | ========> Fecha tudo
+>iptables -P OUTPUT DROP  |
+
+>iptables -F INPUT ACCEPT   |
+>iptables -F FORWARD ACCEPT | ========> Fecha tudo
+>iptables -F OUTPUT ACCEPT  |
+
+>iptabls -h	============> ajuda
+
+>__________________________________echo "Carregando modulos adicionais"______________________________
+modprobe ip_conntrack_ftp #
+modprobe ip_nat_ftp
+
+>_________________________________echo "Resetando todas as regras"___________________________________
+iptables -F							#reseta todas as regras do iptable
+iptables -t nat -F 						#reseta todas as regras do nat
+
+>_______________________________echo "Habilitando o Reecaminhamento de pacotes"______________________
+echo 1 > /proc/sys/net/ipv4/ip_forward 				#habilita o reencaminhamento de pacotes entre as interfaces de rede
+
+>_______________________________echo "Liberando acesso para o LoopBack"______________________________
+iptables -A INPUT -i lo -j ACCEPT 				#tudo que vier do loopback, aceita!
+
+>___________________________echo "Bloqueando servicos nao utilizados na Internet"_____________________
+
+iptables -A OUTPUT -o eth0 -p tcp --dport 139 -j DROP 				#bloqueia todas as solicitacoes na porta 139, porque tem virus que saem procurando a porta NETBIOS (137,138 e 139), tcp e udp, para infectar os windows!
+
+_____________________________________________________________________________________________________
+echo "Liberando acesso da Rede Interna" #neste momento vai ser liberada a entrada da rede na internet e o redirecionamento de pacotes._____________________________________________________________________
+
+iptables -A INPUT -i eth0:0 -s 192.168.6.0/24 -j ACCEPT
+iptables -A FORWARD -i eth0:0 -p tcp -s 192.168.6.0/24 -j ACCEPT #libera todas as portas tcp para a rede interna
+iptables -A FORWARD -i eth0:0 -p udp -s 192.168.6.0/24 -j ACCEPT
+iptables -A INPUT -p icmp -j ACCEPT
+
+______________________________________echo "Liberando acesso a Internet"______________________________
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE 				#regra que ativa o nat dinamico
+
+iptables -A FORWARD -i eth0 -p tcp -m state --state ESTABLISHED -j ACCEPT       #especifica o STATFULL (estado completo), define que so vai entrar na FORWARD, tudo que for resposta de algo que vem de dentro da rede.
+
+iptables -A FORWARD -i eth0 -p udp -m state --state ESTABLISHED -j ACCEPT
+iptables -A INPUT -i eth0 -p tcp -m state --state ESTABLISHED -j ACCEPT
+
+>__________________________________fechado ping_____________________________________________________iptables -I INPUT -i eth+ -p icmp --icmp-type ping -j DROP
+
+$IPTABLES -A icmp_packets -p ICMP -s 0/0 --icmp-type 0 -j ACCEPT
+$IPTABLES -A icmp_packets -p ICMP -s 0/0 --icmp-type 3 -j ACCEPT
+$IPTABLES -A icmp_packets -p ICMP -s 0/0 --icmp-type 5 -j ACCEPT
+$IPTABLES -A icmp_packets -p ICMP -s 0/0 --icmp-type 11 -j ACCEPT
+
+
+>__________________________________bloqueando porta_________________________________________________
+iptables -A OUTPUT -o eth2 -p tcp --dport 192.168.1.1 80 -j REJECT
+
+>_____________________________________GERANDO LOG___________________________________________________
+
+iptables -A OUTPUT -j LOG
+iptables -A INPUT -p tcp --dport 80 -j LOG
+>_____________________________________echo "Liberando servicos"______________________________________
+iptables -A INPUT -p tcp -d 10.1.100.6 --dport 80 -j ACCEPT #web
+iptables -A INPUT -p tcp -d 10.1.100.6 --dport 25 -j ACCEPT #smtp
+iptables -A INPUT -p tcp -d 10.1.100.6 --dport 22 -j ACCEPT #ssh
+iptables -A INPUT -p tcp -d 10.1.100.6 --dport 21 -j ACCEPT #telnet
+iptables -A INPUT -p tcp -d 10.1.100.6 --dport 53 -j ACCEPT
+iptables -A INPUT -p udp -d 10.1.100.6 --dport 53 -j ACCEPT
+iptables -A INPUT -p udp -d 10.1.100.6 --dport 902 -j ACCEPT
+iptables -A INPUT -p udp -d 10.1.100.6 --dport 8222 -j ACCEPT
+iptables -A INPUT -p udp -d 10.1.100.6 --dport 8333 -j ACCEPT
+
+>__________________________________echo "Habilitando nat estatico"___________________________________
+#Acesso Terminal Service
+iptables -A FORWARD -p tcp -d 192.168.6.2 --dport 110 -j ACCEPT
+iptables -t nat -A PREROUTING -p tcp -d 10.1.100.6 --dport 110 -j DNAT --to 192.16.6.2:110
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&   comando ****************************************************************
+
+instalaÁao do kurumim
+>	knxhdinstall
+
+mount
+>	mount rw /dev/hdb1 /mnt/cdrom
+>	mount -t vfat /dev/sda1 /mnt/cdrom
+>	mount /dev/sda1 /mnt/cdrom
+>	# mount "sua_Imagem.iso" /media/diretorio_ISO -o loop 
+apt-get
+
+>	apt-get install ###########
+>	apt-get clean
+>	apt-get update	===================> atualizaÁao
+>	apt-cdrom =============> mais cdrom de atualizacao
+>	apt-get -f dist-upgrade
+>	apt-get remove	nome
+>	apt-get source nome ================> faz download do pacote
+>	sudo apt-get remove gdm3
+>	sudo apt-get remove --auto-remove gdm3 =========> tira as dependencias
+>	sudo apt-get purge gdm3 =====> limpa as configuraÁıes
+>	apt-get purge --auto-remove gdm3
+
+dpkg
+
+>	dpkg-query -l
+>	dpkg -i
+>	dpkg -p
+>	dpkg -l
+>	dpkg -l | grep squid
+>	dpkg -L mc	
+>
+
+installpkg  removepkg
+
+>	installpkg {opcoes} <nome_pacote>
+>       installpkg -r pacote
+>	removepkg pacote
+criando swap
+
+>	dd if=/dev/zero of swapfile bs=1M count=750
+>	mkswap swapfile
+>	swapon swapfilez
+
+>	dd if=/dev/zero of=/swap1 bs=16387 count=32678
+>	ls -al swap1
+>       mkswap /swap1
+>       swapon /swap1
+>	vi /etc/fstab
+/swap1		swap 		swap 		default 00
+
+
+
+teste de desempenho
+
+>	vi bomba.sh
+
+#!/bin/bash
+
+./$0 &
+./$0 &
+./$0 &
+___________________________________________________________________________________________________
+
+>	chmod +x bomba.sh
+>	./bomba.sh
+
+chkconfig
+
+>	chkconfig --list
+>	chkconfig --add progrm
+>	chkconfig --del progrm
+>	chkconfig --level 2345
+>	chkconfig --level 2345 proftpd on
+pacote debian systemctl start sshd
+	      systemctl enable sshd
+nmap
+
+>	 nmap -sTUR -o -v -p -1024 -P0 + ip
+>	 nmap -sTUR -v -p -1024 -P0 + ip
+>	 nmap -sTUR -p -1024 -P0 -v + ip
+>	 nmap -O 192.168.0.66 ===============> escanea a mq interna da rede
+>	 nmap -sT 168.143.xx.48
+>	 nmap -O -v -v
+>	 nmap -sS 192.168.0.1 -p 1-100 ===================> ver porta do servidor
+>	 nmap -sS 192.168.0.0/24 -p 1-150 ==============>escanea mq do servidor
+
+ver rota 
+
+>	ping -R www.uol.com.br
+>	ping -f 192.168.1.1 ===============> -f   inundaÁ„o de envio de ping, provoca um flood, somente o root pode executar com ete parametro.
+>	ping -c 300 -p 2b2b2b415453323d32353526574f310d solebac.com.br
+>	ping -p 2b2b2b415448300d -c 5 solebac.com.br
+>	ping -s 36000 solebac.com.br
+>	ping -l 65520 solebac.com.br
+>	ping solebac.com.br -l 65500 -n 10000
+>	finger @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@solebac.com.br
+>	ping -s 600000 -c 655200 -f mnet.com.br -l 655520
+	#-c determina quantos pacotes ser„o enviados
+	neste exemplo dispara o ping somente 4 vezes.
+>	ping -c 300 192.168.1.1
+
+kernel
+
+>	ps aux
+>	ps ax
+>	top
+>	dd if=kernel_atual of/dev/fd0
+>	mkbootdisk +kernel
+>	dmesg
+>	last | more
+>	stat /var/log/messages
+>	nice --20 top         =======================>da maior prioridade ao processo
+>	free -m ==============> memoria 
+>	cat /proc/cpuinfo
+>	vi /
+
+>	netstat -t | more
+>	netstat -an | more
+>	netstat -a
+>	netstat -tulp | grep vnc
+
+# Open VNC for USER1
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 5800 -j ACCEPT
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 5900 -j ACCEPT
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 6000 -j ACCEPT
+# Open VNC for USER2
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 5801 -j ACCEPT
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 5901 -j ACCEPT
+iptables -A INPUT -m state --state NEW -m tcp -p tcp --dport 6001 -j ACCEPT
+
+>	route -n
+>	route del default
+>	route add default gw + ip
+>	route del -net 169.254.0.0 netmask 255.255.255.0
+>	route add -net 10.2.0.0 netmask 255.255.0.0 gw 10.1.100.2
+>	route add -net 10.4.0.0 netmask 255.255.0.0 gw 10.1.100.6
+>	route add -net 10.5.0.0 netmask 255.255.0.0 gw 10.1.100.7
+>	route add -net 10.6.0.0 netmask 255.255.0.0 gw 10.1.100.9
+>	route add -net 10.7.0.0 netmask 255.255.0.0 gw 10.1.100.12
+
+Vamos entender?
+
+Na primeira linha de cada rota nÛs dizemos que a m·quina remota ter· a nossa interface como gateway, e na segunda linha dizemos que a rede ter· como gateway a m·quina remota. Ou seja, qualquer pacote encaminhado para uma rede especÌfica dever· ser entregue no prÛximo hop (gateway de cada rede) para ser tratado e encaminhado ao destino.
+
+Depois disso podemos colocar estes comandos em um script pra facilitar o nosso trabalho. Para isso use seu editor de textos preferido e copie o conte˙do abaixo, salvando o arquivo como rotas.sh:
+
+#!/bin/bash
+
+echo ìreiniciando interfacesî
+/etc/init.d/networking restart
+
+echo ìroteamento do kernelî
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+echo ìApagando rotasî
+
+route del -host 192.168.0.1 gw 192.168.0.2 dev eth0
+route del -net 192.168.0.0 netmask 255.255.255.0 gw 192.168.0.1 dev eth0
+
+route del -host 10.12.0.1 gw 10.12.0.2 dev eth1
+route del -net 10.12.0.0 netmask 255.255.255.0 gw 10.12.0.1 dev eth1
+
+echo ìcriando rotasî
+
+route add -host 192.168.0.1 gw 192.168.0.2 dev eth0
+route add -net 192.168.0.0 netmask 255.255.255.0 gw 192.168.0.1 dev eth0
+
+route add -host 10.12.0.1 gw 10.12.0.2 dev eth1
+route add -net 10.12.0.0 netmask 255.255.255.0 gw 10.12.0.1 dev eth1
+
+
+
+
+deslingando
+
+>	halt
+>	init 6
+>	shutdown -k 5 "o sistema ficara emanutenÁao em cinco minuto"
+>	shutdown -h 23:00
+>	shutdown -h now
+>	shutdown -c
+>	shutdown -r now
+
+
+performace
+>	fsck -f /dev/hda
+>	hdparm /dev/hda
+>	hdparm -i /dev/hda
+>	dd if=/dev/zero of=/dev/hda ==================>coloca 0 no disco ou limpa para volta a gravar
+>	dd if=/dev/zero of=/dev/null	
+>	ping -b -f 10.1.100.100
+
+programas para trafego
+iptraf-2.7.0.tar.gz
+site www.iptraf.org
+
+>	tar zxvf iptraf-2.7.0.tar.gz
+>	cd iptraf-2.7.0
+>	vi src/Makefile
+# stored here.  iptraf also exec's rvnamed from this directory.
+
+TARGET          = /usr/local/bin =========================> /usr/bin
+
+# The IPTraf working directory; if you change this.  Starting with this
+# version, this definition overrides dirs.h.
+
+WORKDIR         = /var/local/iptraf======================> /var/iptraf
+______________________________________________________________________________________________________>		./Setup
+>	iptraf
+_______________________________________________________proto
+
+>	tcpdump -n ===============> snirff em modo de texto
+>	tcpdump -n -i ethX
+
+formatando disqueted
+>	fdformat dev/fd0 1440	
+
+RPM
+
+>	rpm -Uvh 
+>	rpm -qa | grep pacote
+>	rpm -e
+>	rpm -qpl
+>	m -help
+>	m -qpi
+>	mbuild --rebuild --with rht90
+
+
+PATH
+>	diff -u original.txt revisado.txt > patch-1.1
+>	diff -urN  original.txt revisado.txt > patch-1.1
+VA PARA O DIRETORIO DO ARQUIVO A ATUALIZADO
+>	patch -p0 < patch-1.1
+
+
+TAR
+
+>	tar zxvf pata.tar.gz
+>	tar jxvf pata.tar.bz2
+>	tar cvzf texto.tar.gz /home
+>	tar tvzf pata.tar.gz
+>	tar cvf texto.tar /home
+>       compress texto.tar
+>       tar tvf flavio.tar
+
+UNCOMPRESS
+>	uncompress
+>	compress dump.tar.Z   =======================> Z
+>	compress texto.tar
+
+GZIP
+
+>	gzip texto.tar
+>	gzip -d texto.tar
+>	gzip -cr wget.zip wget-log
+>	gunzip wget.zip
+
+BZIP
+
+>	bzip2 pata.tar
+>	bzip2 -d pata.tar.bz2
+>	bzip2 -zvfd pata.tar.bz2
+
+RSH
+execura comando no computador remoto
+>	rsh -l ns1 ls
+
+RCP
+copia arquivos entre o computador local e o computador remoto
+>	rcp redhat.linux.com.br:/home/redhat/arquivo.doc /home/flavio
+>	rcp redhat.linux.com.br:/home/redhat/wget-log redhat.linux.com.br:/home/fulano
+
+MAIL 
+
+>	mail -s "este arquivo e grand" redhat@linux.com.br 
+>	mail -s "este arquivo e grand" redhat@linux.com.br < /root/master
+
+KERNEL
+Site www.kernel.org
+     ftp://kernel.org
+2.4
+>	tar zxvf <onde_ele_estiver> -C /usr/src/
+>	cd /usr/src
+>	ln -s linux-2.4.18 linux
+>	cd linux
+>	make menuconfig		make config	make xconfig
+>	make dep
+>	make clean
+>	make bzImage  ==========================> cria o novo kernel
+>	cp /usr/src/linux/arch/i386/boot/bzImage /boot/bzImage-2.4.18
+>	make modules
+>	make modules_install
+>	cp System.map /boot/System.map-2.4.18
+>       mkinitrd /boot/initrd-2.4.18.img + kernel
+>       ln -s /boot/initrd-2.4.18.img
+
+2.6
+
+>       tar zxvf <onde_ele_estiver> -C /usr/src/
+>       cd /usr/src
+>       ln -s linux-2.6.8 linux
+>       cd linux
+>       make menuconfig         make config     make xconfig
+>       make 
+>       make modules
+>       make modules_install
+>	cp System.map /boot/System.map-2.6.8
+>	cd arch/i386/boot
+>       cp bzImage /boot/bzImage-2.6.8
+>	cd /usr/src/linux-2.6.8
+
+atualizaÁao com patch
+
+>	gunzip patch-2.6.9.rc2.gz
+>	mv patch-2.6.9.rc2 /usr/src
+>	patch -p1 < patch-2.6.9.rc2
+>	mkinitrd /boot/initrd-2.4.18.img + kernel
+>	ln -s /boot/initrd-2.4.18.img
+
+FreeSWAN  IPSEC
+site http://www.FreeSWAN.org
+     ncftpget ftp://ftp.xs4all.nl/pub/crypto/freeswan/freeswan-*
+ultimo versao realese compativel com seus modulos freeswan-2.06.tar.gz
+>	mv  /etc/ipsec.secrets /tmp/ 
+>	ipsec newhostkey --output /etc/ipsec.secrets --hostname web1.solebac.com.br
+>	vi /etc/ipsec.conf	
+conn vpn
+        # Left security gateway, subnet behind it, next hop toward right.
+        left=10.1.100.100
+        leftsubnet=100.1.100.0/24
+        leftid=@virus.corvo.com.br
+        leftnexthop=%defaultroute
+        leftrsasigkey=0sAQOA3hjw0M8DIashUTpTvSX+4cS40ig5eU1KC15B3abGOx5tB3asaKrq7KNTW3/pb1n1THBporlRAitii9Tsg171QzLAEBGk08Y++7psXr6IOr+IvrIIzNUjZoKIm6fj/TeCnO8bmD0gf1HG4MDPR+v8WssSDra7mIHWaM+JP5fFwK4ku8SU9x2oV0+LRtAecbvBF1D51vAkiqPFDEEojbCJiSO5nGBewQ/bRO5To5L5HLbBpzgu6Xvbp33+g0ooPXsuLE+5UurSzruRbo1LJexSgwNt0HfgvqNxL/qyQ6MTjc9ROeIN33rddsTza3nsoiwv3dK5Wzod3ba8PDK/4HgBXQ/mxD6JiCHSmzW9ZCO6fXlbvPz+exXNbwZSjpKSUDG3dqV/QIYX93+Q1DUZBd7JGoF0Hu/GCaMwSFbXyMLh2vJ8ga0D5fvN
+        # Right security gateway, subnet behind it, next hop toward left.
+        right=192.168.1.1
+        rightsubnet=192.168.1.0/24
+        rightid=@web1.solebac.com.br
+        rightnexthop=%defaultroute
+        rightrsasigkey=0sAQOaGk6jk5eyEywOU1GX7U8nkyAixzU9eMFhV3mQGO1em9B5XySHQ+uRS5TLCb1lJQ1M8eqxot61dcfPzWbFTJ/Kw8PTLph3IEzue1y8eSL+K9CcVzcPiUDY3Q76pOlyhFYMe4vELT50LcrXdwrSeoqfWeVYy42WFEMswCcatmj7CbK6eWum2P5CFUNXmChLKG9k+I2wtscNHzcKAxAnzg0biIWjhQAFiyP+ZNLQhz7AZTKFfzlPydLp1hIef+KAuv0mueALtAJsbGZOwVbdQ9kuEGbM8SyizMGr0LIsVHC6IK/+Of2BnQNLEK/WFQJr4mBtiCQ16rYLz4hYsWj7CF6STsbDkvUMzlz0VKyUmuBgTNyHvzLz8Qng37vJB0vFS9zFCXhirVwKyNwE0OizVoVSCOE5xRDwPuKxhsB097wb0vdf+mNyagdCSyFPsuqImyyaxqwTwZE16yVe0rFlcftD
+	# To authorize this connection, but not actually start it, at startup,
+        # uncomment this.
+        auto=add
+________________________________________________________________________________>	ipsec showhostkey --right
+>	ipsec showhostkey --left
+>	ipsec setup stop
+>	ipsec setup start
+>	ipsec auto --up vpn
+>	iptables -A INPUT -p udp -i eth1 --sport 500 --dport 500 -j ACCEPT
+>	iptables -A INPUT -p udp -i ipsec0 --sport 500 --dport 500 -j ACCEPT
+>       iptables -A OUTPUT -p udp -o eth1 --sport 500 --dport 500 -j ACCEPT
+>	iptables -A OUTPUT -p udp -o ipsec0 --sport 500 --dport 500 -j ACCEPT
+>       iptables -A INPUT -p 50 -i eth1 -j ACCEPT
+>       iptables -A OUTPUT -p 50 -o eth1 -j ACCEPT
+>       iptables -A INPUT -p 50 -i ipsec0 -j ACCEPT
+>       iptables -A OUTPUT -p 50 -o ipsec0 -j ACCEPT
+>	iptables -A INPUT -p udp -i eth1 --dport 500 -j ACCEPT
+
+----------------------------------------------------------------------------------------
+OPENVPN SIMPLES
+Matriz
+ADSL com IP 200.217.222.222
+LAN com a classe 192.168.1.0/24
+
+Filial
+ADSL com ip 200.141.64.33
+LAN com a classe 192.168.2.0/24
+
+$ tar -xzvf openvpn-1.5.0.tar.gz
+$ cd openvpn-1.5.0
+$ ./configure
+$ make
+$ su
+$ make install 
+
+$ cd /etc/openvpn
+openvpn --genkey --secret chave
+
+vi matriz.conf 
+# Usar como interface o driver TUN
+dev tun 
+# 10.0.0.1 ip que ser· assumido na matriz
+# 10.0.0.2 ip remoto, ou seja, esse ser· o ip da filial
+ifconfig 10.0.0.1 10.0.0.2
+# Entra no diretÛrio onde se encontram os arquivos de configuraÁ„o
+cd /etc/openvpn 
+# Indica que esse t˙nel possui uma chave de criptografia
+secret chave 
+# OpenVPN usa a porta 5000/UDP por padr„o.
+# Cada t˙nel do OpenVPN deve usar
+# uma porta diferente.
+# O padr„o È a porta 5000
+port 5000 
+# Usu·rio que rodar· o daemon do OpenVPN
+user nobody 
+# Grupo que rodar· o daemon do OpenVPN
+group nobody 
+# Usa a biblioteca lzo
+comp-lzo 
+# Envia um ping via UDP para a parte
+# remota a cada 15 segundos para manter
+# a conex„o de pÈ em firewall statefull
+# Muito recomendado, mesmo se vocÍ n„o usa
+# um firewall baseado em statefull.
+ping 15 
+# NÌvel de log
+verb 3
+#PROTO
+# Agora subir o serviÁo
+openvpn --config /etc/openvpn/matriz.conf -daemon
+ifconfig tun+
+# Agora a configuraÁ„o da filial
+
+touch /etc/openvpn/filial.conf
+
+# Usar como interface o driver TUN
+dev tun 
+# 10.0.0.1 ip que ser· assumido na matriz
+# 10.0.0.2 ip remoto, ou seja, esse ser· o ip da filial
+ifconfig 10.0.0.2 10.0.0.1
+# Indica onde est· o ip da Matriz (essa È a ˙nica linha que acrescentamos
+# no arquivo de configuraÁ„o da filial), o resto È tudo igual. 
+remote 200.217.222.222
+# Entra no diretÛrio onde se encontram os arquivos de configuraÁ„o
+cd /etc/openvpn 
+# Indica que esse t˙nel possui uma chave de criptografia
+secret chave 
+# OpenVPN usa a porta 5000/UDP por padr„o.
+# Cada t˙nel do OpenVPN deve usar
+# uma porta diferente.
+# O padr„o È a porta 5000
+port 5000 
+# Usu·rio que rodar· o daemon do OpenVPN
+user nobody 
+# Grupo que rodar· o daemon do OpenVPN
+group nobody 
+# Usa a biblioteca lzo
+comp-lzo 
+# Envia um ping via UDP para a parte
+# remota a cada 15 segundos para manter
+# a conex„o de pÈ em firewall statefull
+# Muito recomendado, mesmo se vocÍ n„o usa
+# um firewall baseado em statefull.
+ping 15 
+# NÌvel de log
+verb 3
+
+#PROTO
+# openvpn --config /etc/openvpn/filial.conf -daemon
+# ifconfig tun0
+ADICIONANDO ROTAS
+ echo 1 > /proc/sys/net/ipv4/ip_forward
+# dentro do servidor da Matriz o seguinte comando: 
+ route add -net 192.168.2.0/24 gw 10.0.0.2
+# dentro do servidor da filial o seguinte comando: 
+ route add -net 192.168.1.0/24 gw 10.0.0.1
+
+
+
+CBQ
+
+DEVICE=(int-nome),(banda),(peso)
+RATE=(velocidade)
+WEITH=(peso/10)
+PRIO=(prioridade)
+RULE=(ip ou rede a ser controlada)
+
+>(int-nome) È o nome da interface a ser controlada ex: eth0, eth1, lo, ppp0, wvlan0 
+>banda) È a velocidade do dispositivo. ex: ethernet 10Mbit ou 100Mbit 
+>peso) È um par‚metro de ajuste que deve ser proporcional a (banda). Como regra teremos que: (peso) = (banda) / 10 
+>Banda alocada para a classe - limitando a velocidade do shaper. podemos usar: Kbit, Mbit ou bps, Kbps, Mbps como sufixos.
+>par‚metro de ajuste que deve ser proporcional a (banda). Como regra teremos que: (peso) = (banda) / 10 
+
+>RULE=[[saddr[/prefix]][:port],][daddr[/prefix]][:port] 
+Os par‚metros acima fazem que o filtro u32 controlem o tr·fego para cada uma das classes. VocÍ pode usar m˙ltiplos compÙs de regras por arquivo de configuraÁ„o. 
+Exemplos: 
+
+RULE=10.1.1.0/24:80 
+##########################################################################################################################################             CBQ		################################Controle de Banda com CBQ - (Class Based Queueing) 
+Por Fabrizio Flores (fabrizio.flores@vant.com.br) 
+
+1.0 - IntroduÁ„o: 
+H· algum tempo venho notando a falta de documentaÁ„o, principalmente em PortuguÍs, que aborde a configuraÁ„o b·sica de controle de banda numa Linux Box. 
+
+Este artigo pretende demonstrar alguns conceitos sobre o controle de banda e uma configuraÁ„o b·sica do CBQ. 
+
+Obs: A distribuiÁ„o usada foi um Slackware 8.0 Kernel 2.4.7 
+
+1.1 - ConsideraÁıes iniciais: 
+A grande vantagem do CBQ sobre outros, (traffic Shaper ), È permitir o controle n„o sÛ do tr·fego de downstream ( trafego de entrada ), bem como o upstream ( trafego de saÌda ). Isto È muito importante principalmente hoje onde temos conexıes DSL ( Digital Subscriber Line ), sendo instaladas Comumente em prÈdios e compartilhada entre v·rios computadores. Note que com raras exceÁıes, uma das caracterÌsticas da tecnologia DSL È ter uma diferenÁa entre as taxas de transferÍncia para o trafego que entra e o trafego que sai da sua m·quina. Comumente o trafego de entrada È superior j· que o fluxo de dados tende a ser maior no sentido servidor-cliente. J· no caso do trafego de saÌda, ele tende a ser apenas texto. Portanto no caso de prÈdios ou locais onde temos v·rios computadores compartilhando o mesmo link È recomend·vel limitar tambÈm o tr·fego de saÌda, agora, suponhamos que numa destas m·quinas seja instalado um serviÁo ftp, facilmente ele poderia ocupar todo o upstream e fatalmente acabaria por comprometer o uso da rede pelas outras estaÁıes ! O CBQ tambÈm possibilita controlar o trafego sobre um determinado ip e n„o somente por interface como o traffic shaper faz. 
+
+O CBQ apresenta outros recursos, alguns que valem citar: 
+
+
+controle sobre a banda excedente 
+possibilidade de criaÁ„o e utilizaÁ„o de classes. 
+junto ao firewall: para proteÁ„o contra Ataques D.O.S. ( Denial-Of-Service ) * 
+* n„o tratado neste artigo. 
+
+1.2 - Arquivos Necess·rios: 
+Antes de iniciarmos a configuraÁ„o de nossa Box, alguns arquivos que ser„o necess·rios: 
+
+
+cbq.ini ( ftp.equinox.gu.net/pub/linux/cbq/ ) 
+kernel-2.4.7 (http://www.kernel.org/pub/linux/kernel/v2.4/linux-2.4.7.tar.gz ) ou (ftp://ftp.inr.ac.ru/ip-routing/ ) 
+iproute2 (ftp://ftp.linuxmafia.org/pub/Slackware-8/robert/iproute2-2.4.7 ) ou ( www.linuxmafia.org ) existe um search para os pacotes do slackware ( ..tgz ) 
+2.0 - Instalando o Cbq.ini, Iproute2 e Configurando seu Kernel: 
+Crie um diretÛrio onde ser„o colocados os arquivos de configuraÁ„o para o CBQ, geralmente dentro do /etc. Aqui eu criei o diretÛrio /etc/cbq. 
+
+Edite o script cbq.ini e procure pela linha: CBQ_PATH="/etc/sysconfig/cbq" substitua o que esta dentro das aspas pelo caminho completo atÈ o diretÛrio que vocÍ acabou de criar. Ex: CBQ_PATH="/etc/cbq". Salve e faÁa uma copia do arquivo para o diretÛrio /sbin. Caso queira vocÍ poder· renomear o arquivo apenas para "cbq", o que ir· facilitar na hora de digitar algum comando : ) 
+
+Lembre-se de verificar as permissıes para o script que vocÍ acabou de copiar , ele deve ser execut·vel. 
+
+Verifique se sua distribuiÁ„o j· n„o possui o pacote iproute2 previamente instalado. 
+
+Caso sua distribuiÁ„o seja o Slackware, È prov·vel que n„o esteja instalado. Para instalar o pacote no Slackware 8, apenas digite installpkg iproute2-2.4.7.tgz. Feito isto digite apenas ip ... deve aparecer algo na tela tipo: 
+
+# ip
+Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }
+where  OBJECT := { link | addr | route | rule | neigh | tunnel | 
+                  maddr | mroute | monitor }
+             OPTIONS := { -V[ersion] | -s[tatistics] | 
+             -r[esolve] | -f[amily] { inet | inet6 | ipx | dnet | link } | 
+             -o[neline] }
+
+Caso vocÍ use outra distribuiÁ„o e esta n„o venha com o iproute2 instalado, procure pelos pacotes do iproute2 ou obtenha os fontes no ftp do projeto: ( ftp://ftp.inr.ac.ru/ip-routing/ ), no caso de optar pelos fontes, lembre-se de ler o README antes de compilar ! 
+2.1 - Configurando o Kernel 
+No exemplo abaixo, foram colocadas apenas as opÁıes referentes ao QOS / CBQ e NETFILTER / IPTABLES, estas s„o as opÁıes que geralmente eu utilizo. VocÍ provavelmente ter· que adicionar mais alguma coisa, mas isto fica a seu critÈrio. 
+
+[*]Prompt for development and/or incomplete code/drivers
+(*) Packet socket
+[*] Kernel/User netlink socket
+[*] Routing messages
+[*] Network packet filtering (replaces ipchains)
+[*] Socket Filtering
+(*)Unix domain sockets
+[*] UCP/IP networking
+[*] IP: multicasting
+[*] IP: advanced router
+[*] IP: policy routing (NEW)
+[*] IP: use netfilter MARK value as routing key (NEW)
+[*] IP: equal cost multipath (NEW)
+[*] IP: use TOS value as routing key (NEW)
+[*] IP: verbose route monitoring (NEW)
+[*] IP: large routing tables (NEW)
+[*] IP: TCP syncookie support (disabled per default)
+IP: Netfilter Configuration  ---)
+ (*) Connection tracking (required for masq/NAT)
+ (*) FTP protocol support
+ (*) IP tables support (required for filtering/masq/NAT)
+ (*) limit match support
+ (*) MAC address match support
+ (*) netfilter MARK match support
+ (*) Multiple port match support
+ (*) TOS match support
+ (*) tcpmss match support
+ (*) Connection state match support
+ (*) Packet filtering
+ (*) REJECT target support
+ (*) Full NAT
+ (*) MASQUERADE target support
+ (*) REDIRECT target support
+ (*) Packet mangling
+ (*) TOS target support
+ (*) MARK target support
+---
+QoS and/or fair queueing  ---)
+[*] QoS and/or fair queueing
+ (M) CBQ packet scheduler (NEW)
+ (M) CSZ packet scheduler (NEW)
+ (M) The simplest PRIO pseudoscheduler (NEW)
+ (M) RED queue (NEW)
+ (M) SFQ queue (NEW)
+ (M) TEQL queue (NEW)
+ (M) TBF queue (NEW)
+ (M) GRED queue (NEW)
+ (M) Diffserv field marker (NEW)
+ (M) Ingress Qdisc (NEW)
+ [*] QoS support (NEW)
+ [*] Rate estimator (NEW)
+ [*] Packet classifier API (NEW)
+ (M) TC index classifier (NEW)
+ (M) Routing table based classifier (NEW)
+ (M) Firewall based classifier (NEW)
+ (M) U32 classifier (NEW)
+ (M) Special RSVP classifier (NEW)
+ (M) Special RSVP classifier for IPv6 (NEW)
+ [*] Traffic policing (needed for in/egress) (NEW)
+
+Compile, instale o novo kernel e reinicie seu sistema ! 
+
+3.0 - Configurando o CBQ: 
+O CBQ trabalha com arquivos de configuraÁ„o encontrados no diretÛrio definido pela vari·vel $CBQ_PATH, sendo que cada arquivo contÈm uma regra 
+
+O arquivo de configuraÁ„o deve obedecer o formato prÈ-definido: cbq-(clsid).(nome) 
+
+onde: (clsid) È um n˙mero hexadecimal de dois-bytes na escala ( 0002-FFFF ), que forma uma classe ID de CBQ e (nome) È o nome do shaper - ( pode ser qualquer texto ) 
+
+Em casos em que temos poucos arquivos de configuraÁ„o, vocÍ pode definir o (clsid) como a velocidade do shaper Ex. 64k, cbq-0064.backbone-cliente; 512k, cbq-0512.backbone-cliente 
+
+Cada arquivo de configuraÁ„o deve conter os par‚metros(obrigatÛrios) : 
+DEVICE=(int-nome),(banda),(peso)
+RATE=(velocidade)
+WEITH=(peso/10)
+PRIO=(prioridade)
+RULE=(ip ou rede a ser controlada)
+
+Par‚metro DEVICE ( obrigatÛrio ) 
+
+DEVICE=(int-nome),(banda),(peso) ex: DEVICE=eth0,10Mbit,1Mbit 
+
+(int-nome) È o nome da interface a ser controlada ex: eth0, eth1, lo, ppp0, wvlan0 
+
+(banda) È a velocidade do dispositivo. ex: ethernet 10Mbit ou 100Mbit 
+
+(peso) È um par‚metro de ajuste que deve ser proporcional a (banda). Como regra teremos que: (peso) = (banda) / 10 
+
+Quando houver mais classes n„o mesma interface, sÛ È necess·rio especificar o par‚metro (banda) e (peso) uma ˙nica vez, conseq¸entemente em outros arquivos vocÍ poder· ter somente o DEVICE=(nome) 
+
+Par‚metro RATE ( obrigatÛrio ) 
+
+RATE=(velocidade) ex: RATE=5Mbit 
+
+Banda alocada para a classe - limitando a velocidade do shaper. podemos usar: Kbit, Mbit ou bps, Kbps, Mbps como sufixos. 
+
+Par‚metro WEIGHT ( obrigatÛrio ) 
+
+WEIGHT=(peso/10) ex: WEIGHT=500Kbit 
+
+par‚metro de ajuste que deve ser proporcional a (banda). Como regra teremos que: (peso) = (banda) / 10 
+
+par‚metro PRIO ( obrigatÛrio ) 
+
+PRIO=(1-8) ex: PRIO=5 
+
+Prioridade do tr·fego para a classe. Quanto mais elevado o n˙mero, menor a prioridade. A prioridade 5 È um valor excelente. 
+
+par‚metro RULE 
+
+RULE=[[saddr[/prefix]][:port],][daddr[/prefix]][:port] 
+
+Os par‚metros acima fazem que o filtro u32 controlem o tr·fego para cada uma das classes. VocÍ pode usar m˙ltiplos compÙs de regras por arquivo de configuraÁ„o. 
+
+Exemplos: 
+
+RULE=10.1.1.0/24:80 
+
+controla o tr·fego de rede que passa atravÈs da porta 80 na rede 10.1.1.0 
+
+RULE=10.2.2.5 
+
+controla o tr·fego de rede que passa atravÈs de qualquer porta ou do host 10.2.2.5 
+
+RULE=:25,10.2.2.128/26:5000 
+
+controla o trafego vindo de qualquer origem, com destino entre a porta 50 a porta 5000 na rede 10.2.2.128 
+
+RULE=10.5.5.5:80, 
+
+controla o tr·fego vindo da porta 80 do host 10.5.5.5 
+
+Uma virgula "," colocada apÛs qualquer uma destas regras ir· controlar o trafego de saÌda da rede (upstream). Tome cuidado para adicionar a "," na interface de rede correta. 
+
+par‚metro TIME 
+
+Este par‚metro limita o acesso em hor·rios predeterminados 
+
+TIME=(hora inicial)-(hora final);(velocidade)/(velocidade/10) 
+
+ex. TIME=18:00-06:00;256Kbit/25Kbit 
+
+Outros par‚metros 
+
+BOUNDED=yes/no 
+
+se definido como "yes" o shaper ser· mantido mesmo que haja banda excedente 
+
+ISOLATED=yes/no 
+
+se definido como "yes" a banda excedente n„o ser· compartilhada 
+
+4.0 - Exemplos de arquivos de configuraÁ„o: 
+Observe o exemplo abaixo: 
+
+DEVICE=eth0,10Mbit,1Mbit
+RATE=128Kbit
+WEIGHT=10Kbit
+PRIO=5
+RULE=192.128.1.0/24
+
+Esta configuraÁ„o diz, que o tr·fego na interface eth0 de 10Mbit atravÈs da rede 192.168.1.0 ser· processado com a prioridade 5 e uma taxa de shapping de 128kbit. Note que desta forma somente o tr·fego de saÌda (upstream) est· sendo controlado. 
+
+Para controlar o tr·fego nos dois sentidos, devemos configurar o CBQ para ambas interfaces. 
+
+Observe o exemplo: 
+                    +--------------+            192.168.1.1
+ BACKBONE -----eth0-|  linux box   |-eth1------*-[cliente]
+                    +--------------+
+
+Imagine que vocÍ deseja controlar o tr·fego que vem do backbone para o cliente a 28Kbit e o trafego que vai do cliente para o backbone a 128Kbit. VocÍ ter· que criar dois arquivos de configuraÁ„o, um para a eth0 e outro para a eth1: 
+
+cbq-0028.backbone-client
+------------------------------------------------
+DEVICE=eth1,10Mbit,1Mbit
+RATE=28Kbit
+WEIGHT=2Kbit
+PRIO=5
+RULE=192.168.1.0/24
+------------------------------------------------
+
+cbq-0128.client-backbone
+------------------------------------------------
+DEVICE=eth0,10Mbit,1Mbit
+RATE=128Kbit
+WEIGHT=10Kbit
+PRIO=5
+RULE=200.1.1.1,
+-------------------------------------------------------------------------
+
+5.0 - Testando: 
+No prompt de comando, digite: 
+
+cbq
+
+Uma pequena lista de comandos ir· aparecer na tela: 
+
+cbq
+Usage:  cbq {start|stop|restart|timecheck|list|stats}
+
+Digitando cbq start, os arquivos de configuraÁ„o ser„o carregados, neste momento sua rede j· deve estar sofrendo a aÁ„o do shaper. 
+Para testar, basta mudar os par‚metros de configuraÁ„o e digitar: cbq restart, isto forÁara a reinicializaÁ„o do cbq e as novas configuraÁıes ser„o lidas. Coloque velocidades da ordem de 1kbit, e vocÍ ver· como fica realmente lento ( hahahahahah ), mas falando sÈrio isto ir· demonstrar que o cbq realmente est· atuando :) 
+
+Teste os demais comandos do cbq, como cbq list e cbq stats. 
+
+
+Outra dica importante: para que o cbq seja carregado toda vez que a sua linux Box for inicializada, coloque o comando /sbin/cbq start no seu rc.local 
+6.0 - Finalizando 
+6.1 NAT: (Network Address Translation): 
+
+Nossa configuraÁ„o j· esta praticamente concluÌda, apenas devo lembrar que as estaÁıes ainda n„o poder„o navegar na internet. Esta faltando uma coisinha chamada NAT. N„o pretendo explicar neste artigo o que È, ou dar qualquer detalhamento sobre o assunto, contudo colocarei um exemplo de script que vocÍ dever·: ler, entender, e se achar que deve, rodar em seu rc.local. ( este script n„o foi feito por mim , peÁo desculpas ao autor, mas n„o lembro onde encontrei este exemplo) 
+
+echo "1" > /proc/sys/net/ipv4/ip_forward
+/sbin/modprobe iptable_nat
+/sbin/modprobe ip_conntrack
+/sbin/modprobe ip_conntrack_ftp
+/sbin/modprobe ip_tables
+/sbin/modprobe ipt_unclean
+/sbin/modprobe ipt_limit
+/sbin/modprobe ipt_LOG
+/sbin/modprobe ipt_REJECT
+/usr/sbin/iptables -F
+/usr/sbin/iptables -t nat -F
+/usr/sbin/iptables -P FORWARD DROP
+/usr/sbin/iptables -A INPUT -i lo -j ACCEPT
+/usr/sbin/iptables -A OUTPUT -o lo -j ACCEPT
+/usr/sbin/iptables -A FORWARD -s 192.168.1.0/24 -d 0/0 -j ACCEPT
+/usr/sbin/iptables -A FORWARD -s 0/0 -d 192.168.1.0/24 -mstate \
+                   --state ESTABLISHED,RELATED -j ACCEPT
+/usr/sbin/iptables -t nat -A POSTROUTING -s 192.168.1.0/24 \
+                   -d 0/0 -j MASQUERADE
+
+Obs: troque o ip 192.168.1.0 para o ip de sua rede interna 
+
+Para maiores informaÁıes procure no www.google.com por: NAT, IPTABLES, NETFILTER, MASQUERADE 
+
+6.2 - DHCPD: 
+
+Para deixar a soluÁ„o completa, provavelmente seria interessante vocÍ rodar um dhc server, para facilitar sua vida e de seus clientes. 
+Ent„o resolvi colocar tambÈm um exemplo de dhcpd.conf. 
+
+Para instalar: em sua linux Box, no diretÛrio /etc, crie um arquivo chamado dhcpd.conf e cole o exemplo abaixo. 
+VocÍ deve editar o arquivo e substituir os ips como indicado abaixo. 
+
+#-----------------------------------------------
+default-lease-time 43200;
+max-lease-time 43200;
+option domain-name "nome-de-seu-servidor";
+option domain-name-servers 192.168.1.1;
+subnet 192.168.1.0 netmask 255.255.255.0 {
+        range 192.168.1.50      192.168.1.250;
+        option routers          192.168.1.1;
+        option subnet-mask      255.255.255.0;
+        #option netbios-name-servers 192.168.1.1;
+        #option netbios-node-type 2;
+#-----------------------------------------------
+
+onde: 
+
+default-lease-time 43200;
+max-lease-time 43200;
+option domain-name "nome-de-seu-servidor";
+option domain-name-servers ip-do-seu-servidor-de-nomes;
+subnet 192.168.1.0 netmask 255.255.255.0 {
+        range 192.168.1.50      192.168.1.250;
+        option routers          192.168.1.1;
+        option subnet-mask      255.255.255.0;
+        #option netbios-name-servers 192.168.1.1;
+        #option netbios-node-type 2;
+}
+substitua o ip 192.168.1.0 pelo ip de sua rede interna ! 
+
+Feito isto, coloque o seguinte comando em seu rc.local: 
+
+/usr/sbin/dhcpd (interface) 
+
+onde: (interface) È a interface de rede em que vocÍ deseja rodar o dhcp server. 
+
+para maiores informaÁıes e outros detalhes, no prompt, digite man dhcpd 
+
+Obs: ( Ip din‚mico ) 
+Em casos onde temos o ip da interface de entrada sendo fornecido via dhcp, teremos que fazer com que o ip dentro do arquivo de configurÁ„o do cbq tambÈm seja alterado da mesma forma. 
+
+Para tanto criei um pequeno script usando os comando ifconfig e cut que deve resolver. Sei que a soluÁ„o ficou muito "bonita", mas funciona : ). Caso alguÈm tenha alguma idÈia melhor .... meu e-mail esta no final deste artigo ! 
+
+Coloque estas linhas dentro de seu rc.local. Lembre-se de alterar o caminho e o nome em cada linha para corresponder ao path e o nome de seu arquivo de configuraÁ„o do cbq. Verifique tambÈm o nome da interface de rede. 
+
+No meu caso ficou assim: 
+
+#!/bin/sh
+ip=`ifconfig eth0 | cut -dF -f1 | cut -d: -f2 | cut -dB -f1 -s`
+echo "DEVICE=eth0,10Mbit,1Mbit" > /etc/cbq/cbq-64.backbone-client
+echo "RATE=256Kbit" >> /etc/cbq/ cbq-64.backbone-client
+echo "WEIGHT=25Kbit" >> /etc/cbq/ cbq-64.backbone-client
+echo "PRIO=5" >> /etc/cbq/ cbq-64.backbone-client
+echo "RULE=$ip," >> /etc/cbq/ cbq-64.backbone-client
+/sbin/cbq start
+
+NOTA1: 
+
+
+O autor deste artigo n„o possui nenhuma responsabilidade sobre qualquer problema ou danos que venham a ocorrer em seu computador ou sistema em funÁ„o das informaÁıes contidas aqui. 
+O RISCO È inteiramente SEU. 
+As informaÁıes contidas neste artigo s„o baseadas em experiÍncia prÛpria e documentaÁ„o coletada na rede ( os links est„o em "referencias" ). 
+Note que nenhum aspecto de seguranÁa foi abordado neste artigo, È seu o DEVER de zelar pela seguranÁa de seu sistema! 
+NOTA2 
+
+
+Qualquer correÁ„o ou contribuiÁ„o que vocÍ queira fazer, mande um e-mail para: fabrizio.flores@vant.com.br ou admin@arquivologia.ufsm.br. Sua contribuiÁ„o ser· publicado e seu nome citado. 
+Referencias: 
+IPROUTE2 Utility Suite Howto: [ http://www.linuxgrill.com/iproute2.doc.html ] 
+
+Linux 2.4 Advanced Routing HOWTO: [ http://www.linuxhq.com/ldp/howto/Adv-Routing-HOWTO-11.html ] 
+
+Bandwidth Limiting Howto: [ http://www.linuxdoc.org/HOWTO/Bandwidth-Limiting-HOWTO/index.html ] 
+
+UnderLinux.com.br: [ http://www.underlinux.com.br/sections.php?op=viewarticle&artid=86 ] 
+
+cbq.ini e cbq.ini howto: [ ftp.equinox.gu.net/pub/linux/cbq/cbq.ini ] 
+
+
+--------------------------------------------------------------------------------
+
+Autor: Fabrizio Flores (fabrizio.flores@vant.com.br) 
+
+Comandos para administracao
+ ls *.?
+more [0-9] *
+ls /etc/ [!a-m] *
+file /usr/bin/*x*
+ls [a-z] * [0-9]
+ls -l | grep '^d'
+ls -a .[!.]*
+ls -al | grep Set
+ls -al | grep Out
+2) ls -l
+O comando acima exibe o conte˙do da pasta em forma de lista:
+ ls -l
+Com o comando ls seguido do par‚metro -a, podemos listar o conte˙do de um diretÛrio em forma de coluna:
+ ls -a
+Com ls -t podemos listar os arquivos por ordem de data de modificaÁ„o. Arquivos que foram modificados por ˙ltimo, mais recentemente, s„o exibidos em primeiro lugar:
+ ls -t
+Lista os arquivos por ordem de data de modificaÁ„o, tambÈm exibindo os modificados mais recentemente em primeiro lugar. PorÈm, este comando lista tudo com mais detalhes:
+ ls -lt
+Similar ao comando acima, com a diferenÁa de listar em ordem reversa, ou seja, os modificados mais recentemente v„o ficando para o final da lista:
+ ls -ltr
+O comando acima exibe os arquivos de uma pasta em formato de bloco, sendo que eles s„o ordenados por tamanho:
+ ls -s
+O comando acima permite filtrar e listar somente determinados tipos de arquivo. Por exemplo, ls -l *.php exibir· somente os arquivos .php contidos na pasta, e assim por diante:
+ ls -l *.php
+Com ls -1, podemos fazer com que os arquivos do diretÛrio sejam listados por linha, um em cada linha:
+ ls -1
+Para obter uma listagem de arquivos que exiba seus respectivos tamanhos de uma forma mais compreensÌvel, ou ìHuman Readableî (humanamente legÌvel). Assim, vocÍ pode conferir os tamanhos em KB, MB, GB, etc:
+ ls -lh
+Digamos que vocÍ esteja em um diretÛrio e deseje listar todos os seus subdiretÛrios, apenas, excluindo os arquivos aÌ presentes.  Basta ent„o digitar ls -d */ , e o output ser· similar ao abaixo:
+ ls -d */
+ ls -g e ls -G
+Para excluir da listagem de arquivos os propriet·rios e os grupos de cada arquivo. O comando ls -g exclui da lista o propriet·rio, e ls seguido do par‚metro -G (observe a letra mai˙scula aqui) exclui o grupo. TambÈm È possÌvel usar os dois de forma combinada, ou seja, ls -g -G :
+ ls -g -G
+AtravÈs deste comando, vocÍ pode listar n„o somente arquivos e pastas, mas tambÈm o conte˙do de subdiretÛrios, como outros arquivos, por exemplo:
+ ls -R
+Para listar o conte˙do e separar apenas por uma vÌrgula:
+ ls -m
+O comando acima lista pastas e arquivos incluindo o caminho completo para eles:
+ ls -d $PWD/*
+who | cut -f1 -d " "
+PS1='[\u@\h \W]\! '
+PS1='[\! $PWD \]$ '
+od -x squid.conf
+cat passwd | grep '^root'
+cat passwd | grep '^root' *
+grep '^.*, [0-9]\[10.\]' coutrix.txt
+grep delegate /etc/ 2>/dev/null
+grep redhat passwd
+find / -size +5000
+find . -print
+cp /home/stacy/images/image*.jpg /home/stacy/archive
+scp /home/stacy/images/image*.jpg stacy@myhost.com:/home/stacy/archive "semelhante ao cp"
+scp stacy@myhost.com:/home/stacy/archive/image*.jpg /home/stacy/downloads "remoto"
+scp [-12346BCpqrv] [-c cipher] [-F ssh_config] [-i identity_file] 
+    [-l limit] [-o ssh_option] [-P port] [-S program]
+    [[user@]host1:]file1 ... [[user@]host2:]file2
+scp -r jeff@myhost.com:/home/jeff/documents /home/jeff/downloads/documents
+rcp tmp/file myhost:/tmp/file
+Comando sed
+1∫ ñ SubstituiÁ„o de texto. Esta funÁ„o È de grande utilidade quando queremos modificar  palavras/strings inseridas em um texto. Exemplo :
+
+echo 'N„o esqueÁa de conferir os outros posts da comunidade' | sed 's/comunidade/aw2net/'
+
+echo 'Duvidas sobre o awk ? entre no post de awk e tire suas duvidas sobre awk' | sed 's/awk/sed/g'| tee sedteste
+sed  's/sed/awk/' sedteste
+
+Para deletar a(s) linha(s) de um arquivo,usamos a seguinte sintaxe :
+
+# sed -i '1,5 d' sedteste
+
+Adicionando linhas com os padrıes ìaî e ìiî :
+
+echo -e 'vamos fazer\num teste\nadicionando linhas\ncom o post da aw2net' | sed -r '/post+/ a Oba,consegui' >> sedteste
+
+
+
+lsof [opÁıes]
+OpÁıes comuns:
+lsof <enter> 
+Lista todos os arquivos abertos por todos os processos.
+
+
++D diretÛrio
+ Procura todas as inst‚ncias abertas do diretÛrio listado e todos os arquivos e diretÛrios que ele contÈm
+
+
+-i
+Mostra uma lista de sockets de rede abertos
+
+
+-i :n
+Mostra as conexıes abertas na porta n
+
+
+-i [tcp|udp]
+Mostra as conexıes ativas usando TCP ou UDP
+
+
+-u usu·rio
+Mostra o que o usu·rio tem aberto
+
+
+-p PID
+Mostra os arquivos abertos pelo processo com PID especificado
+
+
+-t
+ Retorna apenas os identificadores do processos (somente PIDs)
+
+1. Mostrar os processos ativos no diretÛrio /acesso. Usamos o comando lsof sem opÁıes, e filtramos o resultado com grep:
+# lsof | grep  /acesso
+2. Listar todas as conexıes ativas que usem o protocolo UDP:
+# lsof -i UDP
+3. Mostrar as conexıes abertas na porta 931:
+# lsof -i:931
+4. Mostrar o que o usu·rio fabio possui aberto:
+# lsof -u fabio
+5. Mostrar quais arquivos e conexıes de rede o comando ping usa apÛs ser disparado por um usu·rio:
+# lsof -c ping
+6. Procura todas as inst‚ncias abertas do diretÛrio /root:
+# lsof +D /root
+7. Obter o tr·fego IPv6 na m·quina:
+# lsof -i 6
+8. Descobrir portas que est„o aguardando conexıes (LISTEN):
+# lsof -i -s TCP:LISTEN
+9. Mostrar os arquivos abertos por todos os usu·rios EXCETO o usu·rio fabio. para isso usaremos o caractere ^ (express„o regular):
+# lsof -u ^fabio
+0. Matar todos os processos pertencentes ao usu·rio fabio de uma sÛ vez:
+# kill -9 $(lsof -t -u fabio) 
+
+rpm qi samba		=====================> informaÁao
+rpm qc samba		=====================> arquivo de confliguraÁao
+rpm ql samba		=====================> procura
+rpm qa samba		=====================> pocate instalado
+rpmbuild -bb msttcorefonts-1.3-4.spec
+rpmbuild -ba SPECS/X-1.4.spec
+rpm --rebuild zoo-2.10-3.src.rpm
+rpmbuild -tb openvpn-1.5.0.tar.gz
+rpmbuild --rebuild arquivo.src.rpm
+rpmbuild -ba
+rpmbuild -v -ba ... CL6
+rpmbuild -bs mozilla.spec
+rpm -i modutils-2.7.24-1.src.rpm
+rpmbuild -bb /usr/src/redhat/SPECS/modutils.spec
+rpmbuild --rebuild http://download.nvidia.com/XFree86_40/1.0-4191/NVIDIA_kernel-1.0-4191.src.rpm && rpm -ihv http://download.nvidia.com/XFree86_40/1.0-4191/NVIDIA_GLX-1.0-4191.i386.rpm /usr/src/redhat /RPMS/i386/NVIDIA_kernel-1.0-4191.i386.rpm
+ 
+
+
+wc -o			palavras
+wc -c			caracteres
+wc -l 			linhas
+
+lpr -lpl /etc/passwd
+lpq
+tar -zxvf /dev/st0
+tar -cvf /dev/st0 /home .... compacta
+/etc/cups/printers.conf
+find . -user root -print | cpio -ov | compress >/home/teste
+chage -E 20/08/99 redhat ======================> expira conta, travando-a
+chage -E 0 redhat =====================> destrava a conta
+chage -l redhat
+chage -m5 -M10 -W 7 redhat ====>m5 min_days====>-M10 max_days======>-W aviso antes
+Obs: Habilita o vencimento de senha para trapper {min 5, max 10 e warn 7
+
+date -u 012019252004 ====>01-mes==>20-dia==>1925===>2004-ano
+++++++++++++++++++++++++++++++>SeguranÁa de contas<+++++++++++++++++++++++++++++usermod -e 22/08/2004 redhat ===================> expiraÁao
+usermod -f 5 redhat  =========================>contagem inativa para travar
+usermod -r redhat    ========================> remove usuario
+usermod -u 0 redhat ==================> altera o UID
+usermod -s /bin/bash redhat  ================> atera o shell
+useradd -m -s /bin/bash redhat  ======>adicionar user redhat com shell /bin/bash
+
+				hd e floppy
+
+mkfs -t ext3 /dev/hda5 1024000
+mkfs -t msdos /dev/fd0
+fdformat /dev/fd0u1440
+
+scandisk
+
+e2fsck -pv /dev/hda1
+
+wget ftp://redhat:uysu931@www/
+
+ ps axu | awk '{ print $2 }'
+awk '/padrao/ { print }'
+http://virus.corvo.com.br/cgi-bin/openwebmail/openwebmail.pl
+wk 'NR % 2 == 0 { print }' /etc/passwd
+$ awk 'NR % 2 == 1 { print }' arquivo.txt  # ou ainda...
+$ awk 'NR % 2 { print }' arquivo.txt       # pense em C
+iptables -I INPUT -p tcp -i eth0 --dport 25 -j REJECT #Supondo que conexıerns s„eitas por padr„omo eu fecho a conex„ra uma porta com iptables?
+
+
+
+
+openwebmail 
+
+
+ /var/www/cgi-bin/openwebmail/openwebmail-tool.pl --init
+
+
+GRUB - INSTALL
+
+1 - $ sudo mount /dev/sda1 /mnt
+
+$ sudo grub-install --root-directory=/mnt /dev/sda
+
+2 - $ sudo mount /dev/sda1 /mnt
+
+$ sudo mount --bind /dev /mnt/dev
+
+$ sudo chroot /mnt
+
+$ nano /etc/default/grub
+
+$ update-grub
+
+$ grub-install /dev/sda
+
+Caso dÍ algum erro:
+
+$ grub-install --recheck /dev/sda
+
+Pressione "Ctrl + D" para sair do chroot
+
+$ sudo umount /mnt/dev
+
+$ sudo umount /mnt
+
+$ sudo reboot
+
+3 - Boot com o live-cd
+
+$ mount /dev/sda1 /mnt
+
+$ chroot /mnt
+
+grub
+
+grub> root (hd0,1)
+
+grub> setup (hd0)
+
+
+
+    SoluÁ„o Live CD
+
+    Inicialize o computador utilizando o Live CD.
+    Abra o terminal.
+    Veja suas partiÁıes:
+    # sudo fdisk -l
+    Crie uma pasta para montar sua partiÁ„o raiz (exemplo hda1):
+    # sudo mkdir /mnt/hda1
+    Monte a partiÁ„o raiz (exemplo hda1), na pasta criada:
+    # sudo mount /dev/hda1 /mnt/hda1
+    Entre na partiÁ„o raiz (exemplo hda1) montada como root:
+    # sudo chroot /mnt/hda1
+    Atualize a lista do GRUB:
+    # update-grub
+    Reinstalar o GRUB na partiÁ„o raiz (exemplo hda1):
+    # grub-install /dev/hda1
+    Saia do modo root:
+    # exit
+    Desmonte a partiÁ„o raiz (exemplo hda1):
+    # sudo umount /mnt/hda1
+    Sair do terminal e reinicializar o micro.
+
+
+
+    sudo mkdir /mnt/hdaX
+    sudo mount -t reiserfs /dev/hdaX /mnt/hdaX
+    chroot /mnt/hdaX
+    mcedit /etc/lilo.conf (depois de revis·-lo, aperte F10 pra salvar)
+    lilo
+    lilo -b /dev/hda
+
+
+$ sudo su
+ou
+$ su -
+ou
+$ su
+
+Passo 4 - Gravar o grub na MBR. Verifique em que partiÁ„o est· instalado o Linux.
+
+# fdisk -l
+
+Agora vocÍ ter· que montar esta partiÁ„o.
+
+Primeiramente crie um pasta para a montagem do sistema.
+
+# mkdir /mnt/linux
+
+Agora vamos montar o sistema:
+
+# mount -t auto /dev/sdaX /mnt/linux
+
+Onde X È o n˙mero da partiÁ„o que o Linux est· instalado, sda se o disco for sata e hda se o disco for IDE.
+
+Agora vamos instalar o grub na MBR.
+
+# grub-install --root-directory=/mnt/linux /dev/sda
+
+Pronto, o grub est· instalado no lugar correto, mas ainda n„o acabou, pois precisamos configur·-lo.
+
+Passo 5 - Reinicie o computador e ver· que o grub ir· iniciar mas ainda sem nenhuma configuraÁ„o, n„o fique preocupado pois agora È que comeÁa a melhor parte.
+
+grub> root (hd0,X-1)
+grub> find /boot/grub/stage1
+grub> kernel /boot/grub/core.img
+grub> boot
+
+Agora o computador vai iniciar com o Linux previamente instalado, ainda tem mais algumas configuraÁıes...
+
+Passo 6 - Abra o terminal e faÁa os mesmos procedimentos do passo 3.
+
+Execute os comandos:
+
+# update-grub
+# grub-install /dev/sda
+
+mount -vp disk{5,6,7,8,9}
+fdisk -l /dev/sda | awk '{ print $1 }'
+/dev/sda5       /disk5          ext4    default         0       1
+/dev/sda6       /disk6          ext4    default         0       1
+/dev/sda7       /disk7          ext4    default         0       1
+/dev/sda8       /disk8          ext4    default         0       1
+/dev/sda9       /disk9          ext4    default         0       1
+
+###########################@FEDORA 
+Instalando GNOME
+sudo dnf groupinstall gnome-desktop
+
+sudo dnf groupinstall kde-desktop
+
+sudo dnf groupinstall mate-desktop
+
+sudo dnf groupinstall xfce-desktop
+
+sudo dnf groupinstall cinnamon-desktop
+
+sudo dnf groupinstall lxqt-desktop
+
+Preparing Fedora for KVM Virtualization
+qemu-kvm
+ virt-manager
+ virt-viewer
+ python-virtinst
+
+rpm -q qemu-kvm virt-manager virt-viewer python-virtinst
+Caso n„o esteja instalado
+yum install qemu-kvm virt-manager virt-viewer python-virtinst
+
+#Os pacotes necess·rios para implementar a virtualizaÁ„o podem mudar de uma vers„o do Fedora para a prÛxima
+
+yum groupinstall 'Virtualization'
+
+
+$ vim ~/.xserverrc
+
+
+Depois, coloque isto aqui dentro do arquivo:
+
+#!/bin/sh
+exec /usr/bin/X -nolisten txp "$@"
+
+
+Depois disso, devemos configurar o arquivo ì.xinitrcî, para isto, iremos abri-lo:
+
+$ vim ~/.xinitrc
+
+
+Dentro do arquivos, devemos colocar qual interface iremos iniciar:
+
+exec i3
+
+
+cat .xserverrc
+#!/bin/sh
+exec /usr/bin/Xorg -nolisten tcp "$@" vt$XDG_VTNR
+
+cp /etc/X11/xinit/xinitrc ~/.xinitrc
+
+startx #comece o gnome ou kde
+
+#instalaÁ„o em modo text
+ virt-install --name=windows --ram=3096 --vcpus=1 --cdrom=/opt/win2008server.iso --os-type=windows --os-variant=win2k8 --network bridge=virbr0 --graphics=spice --disk path=/var/lib/libvirt/images/win.dsk,size=15
+
+virsh list --all
+
+Iniciar uma m·quina virtual:
+
+virsh start <nome da vm>
+
+Desligar uma m·quina virtual:
+
+virsh shutdown <nome da vm>
+
+Editar configuraÁ„o:
+
+virsh edit <nome da vm>
+
+ForÁar o desligamento:
+
+virsh destroy <nome da vm>
+
+Salvar um snapshot:
+
+virsh save <nome da vm> <nome do arquivo>
+
+Restaurar um snapshot:
+
+virsh restore <nome do arquivo>
+
+Acessar remotamente via ssh:
+
+virsh -c qemu+ssh://<usuario>@<ip>/system <nome da vm>
+
+Outras dicas
+Para renomar uma m·quina virtual no Virsh È necess·rio copiar o arquivo xml contendo as configuraÁıes, editar manualmente esse arquivPara renomar uma m·quina virtual no Virsh È necess·rio copiar o arquivo xml contendo as configuraÁıes, editar manualmente esse arquivo, criar uma m·quina virtual com o novo nome e remover a antiga.
+
+ 
+virsh dumpxml <nome da vm> > arquivo.xml
+vim arquivo.xml #alterar o novo nome dentro do arquivo xml
+virsh undefine <nome da vm>
+virsh define arquivo.xml
+
+ApÛs aumentar o espaÁo de um virtual disk usando o qemu-img È necess·rio dar boot no guest com alguma distro livecd e usar o software gparted para redimensionar a partiÁ„o sem perda de dados.
+
+ 
+qemu-img resize /home/gustavo/vm/hd-centos.qcow2 +25GB
+
+O processo de clonar uma m·quina virtual consiste em criar uma cÛpia idÍntica com outro nome que pode usar o mesmo virtual disk ou um clone.
+ 
+virt-clone --connect=qemu:///system -o <nome da vm> -n <nome da vm clonada> -f <path do virtual disk>
+
+Liste todas as m·quinas virtuais (inclusive as desligadas)
+
+# virsh list --all
+Verifique em que porta VNC sua m·quina virtual est·
+
+# virsh vncdisplay debian
+Criar um t˙nel SSH no Linux para conectar via VNC ao KVM e realizar a instalaÁ„o pelo console da m·quina virtual.
+
+ # ssh root@172.16.0.1 -L 5900:127.0.0.1:5900
+Via cliente VNC acesse o ip 127.0.0.1:5900
+
+Clonar a m·quina padrao
+
+#  virt-clone -o debian -n srv-www -f /var/kvm/images/srv-www.img
+Configurar auto inicio da maquina srv-www
+
+# virsh autostart srv-www
+Iniciar a m·quina srv-www
+
+# virsh start srv-www
+Desabilitar inicio autom·tico da m·quina srv-www
+
+# virsh autostart --disable srv-www
+Adicionar interface de rede
+
+#  virsh attach-interface --domain srv-www --type bridge --source br1 --model virtio --mac 52:54:00:4b:73:5f --config
+Adicionar unidade de CDROM
+
+virsh attach-disk srv-www ~/virtio-win-0.1-22.iso hdc --type cdrom
+Redimensionar o disco da m·quina srv-www
+
+qemu-img resize srv-www.img +10G
+virsh start srv-www
+Remover a m·quina srv-www
+
+# virsh destroy srv-www
+# virsh undefine srv-www
+
+#Verificar se a maquina tem suporte a virtualizaÁ„o
+egrep '(vmx|svm)' --color=always /proc/cpuinfo
+
+#Gerar imagem iso
+mkisofs -o nomeimagem.iso -r -J /diretorioAlgo
+mkisofs -pad -l -r -J -v -V "nomeimagem" -o /saÌda.iso /diretÛrio
+mount -o loop imagem.iso /diretÛrio/tempor·rio 
+mount -o loop roberson.iso /mnt/temp 
+
+
+sudo service gdm stop
+
+sudo Xorg -configure
+
+sudo mv ~/xorg.conf.new /etc/X11/xorg.conf
+
+sudo service gdm start
+
+
+
+#####################Java Linux 
+sudo apt-get update
+java -version
+sudo apt-get install default-jre
+sudo apt-get install default-jdk
+
+Instalando o OpenJDK7 (opcional)
+sudo apt-get install openjdk-7-jre 
+sudo apt-get install openjdk-7-jdk
+
+Instalando o Oracle JDK
+sudo apt-get install python-software-properties
+sudo add-apt-repository ppa:webupd8team/java
+sudo apt-get update
+
+Oracle JDK 6
+Esta È uma vers„o antiga mas ainda em uso.
+sudo apt-get install oracle-java6-installer
+
+Oracle JDK 7
+Esta È a ultima vers„o est·vel.
+sudo apt-get install oracle-java7-installer
+ou
+sudo apt-get install oracle-java8-installer
+Gerenciando o Java (Opcional)
+Quando existem m˙ltiplas instalaÁıes Java em seu ambiente, a vers„o Java para utilizar como padr„o pode ser escolhida. Para fazer isto, execute o seguinte comando:
+sudo update-alternatives --config java
+sudo update-alternatives --config javac
+Definindo JAVA_HOME
+sudo update-alternatives --config java
+O caminho da instalaÁ„o para cada um È:
+
+1. /usr/lib/jvm/java-7-oracle
+
+2. /usr/lib/jvm/java-6-openjdk-amd64
+
+3. /usr/lib/jvm/java-7-oracle
+
+
+apt-get install alien libaio1 unixodbc
+apt-get install oracle-java8-installer
+apt-get install bc
+alien --script -d oracle-xe_11.2.0-2_amd64.rpm
+
+Copie o caminho da sua instalaÁ„o preferida e ent„o edite o arquivo /etc/environment:
+
+sudo nano /etc/environment
+Nesse arquivo, adicione a seguinte linha (substituindo SEU_CAMINHO pelo caminho copiado):
+
+JAVA_HOME="SEU_CAMINHO"
+source /etc/environment
+echo $JAVA_HOME
+
+export ORACLE_HOME=/u01/app/oracle/product/11.2.0/xe
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ORACLE_HOME/lib
+export PATH=$PATH:$ORACLE_HOME/bin
+export ORACLE_SID=XE
+export ORACLE_BASE=/u01/app/oracle
+source .bashrc
+cd $ORACLE_HOME/network/admin
+Verifique os arquivo 
+-rwxr-xr-x 1 oracle dba  432 mai 11 19:51 listener.ora
+-rwxr-xr-x 1 oracle dba  424 mai 14 22:58 tnsnames.ora
+
+XE =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 192.168.1.6)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = XE)
+    )
+  )
+
+teste logo apos
+$ tnsping XE
+$ lsnrctl status
+
+Importante que a conex„o esteja parelha com o arquivo hosts a exemplo:
+root@oracle:~# cat /etc/hosts
+192.168.1.6     oracle
+127.0.0.1       localhost
+
+diferenÁa entre "/ as sysdba" and "sys/pswrd as sysdba"
+-- sqlplus "/as sysdba" it mean is you use OS authorization and your user must member of dba(ORA_DBA) OS group,else operation will fail.
+
+-- sqlplus sys/pass@sid as sysdba it mean is you use passwordfile authorization .And in this case you need properly configure this file also need set remote_login_passwordfile= EXCLUSIVE or SHARED.
+
+Confira apos longar
+SQL> show parameter remote_login
+
+SQL> select * from v$pwfile_users;
